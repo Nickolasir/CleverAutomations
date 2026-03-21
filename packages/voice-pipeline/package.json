@@ -1,0 +1,35 @@
+{
+  "name": "@clever/voice-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./tier1/*": "./dist/tier1/*.js",
+    "./tier2/*": "./dist/tier2/*.js",
+    "./tier3/*": "./dist/tier3/*.js",
+    "./orchestrator/*": "./dist/orchestrator/*.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:latency": "vitest run src/__tests__/latency-benchmark.test.ts"
+  },
+  "dependencies": {
+    "@deepgram/sdk": "^3.9.0",
+    "groq-sdk": "^0.8.0",
+    "ws": "^8.18.0",
+    "@clever/shared": "*"
+  },
+  "devDependencies": {
+    "@types/ws": "^8.5.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.7.0",
+    "vitest": "^2.1.0"
+  }
+}

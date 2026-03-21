@@ -1,0 +1,33 @@
+{
+  "name": "@clever/pi-agent",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./agent": "./dist/agent.js",
+    "./hardware/*": "./dist/hardware/*.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/",
+    "start": "node dist/index.js",
+    "dev": "tsx src/index.ts",
+    "deploy:os": "bash src/deploy/os-setup.sh",
+    "deploy:ha": "bash src/deploy/ha-install.sh",
+    "deploy:voice": "bash src/deploy/voice-install.sh"
+  },
+  "dependencies": {
+    "@clever/shared": "*",
+    "@clever/ha-bridge": "*",
+    "@supabase/supabase-js": "^2.49.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "@types/node": "^22.0.0",
+    "vitest": "^2.1.0"
+  }
+}

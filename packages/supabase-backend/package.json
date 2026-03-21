@@ -1,0 +1,33 @@
+{
+  "name": "@clever/supabase-backend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./realtime": "./dist/realtime/channels.js",
+    "./seed": "./dist/seed.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "security-test": "vitest run src/__tests__/",
+    "migrate": "supabase db push",
+    "seed": "tsx src/seed.ts",
+    "reset": "supabase db reset"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.49.0",
+    "@clever/shared": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "tsx": "^4.19.0",
+    "vitest": "^2.1.0",
+    "@types/node": "^22.0.0"
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "name": "@clever/ha-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": "./dist/index.js",
+    "./rest-client": "./dist/rest-client.js",
+    "./websocket-client": "./dist/websocket-client.js",
+    "./device-discovery": "./dist/device-discovery.js",
+    "./command-executor": "./dist/command-executor.js",
+    "./scenes": "./dist/scenes.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint src/",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "ws": "^8.18.0",
+    "node-fetch": "^3.3.2",
+    "@clever/shared": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "@types/ws": "^8.5.13",
+    "@types/node": "^22.0.0",
+    "vitest": "^2.1.0"
+  }
+}

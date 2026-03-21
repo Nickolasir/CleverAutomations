@@ -1,0 +1,25 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "composite": true,
+    "paths": {
+      "@clever/shared/*": ["./packages/shared/*"],
+      "@clever/supabase-backend/*": ["./packages/supabase-backend/*"],
+      "@clever/voice-pipeline/*": ["./packages/voice-pipeline/*"],
+      "@clever/ha-bridge/*": ["./packages/ha-bridge/*"],
+      "@clever/pi-agent/*": ["./packages/pi-agent/*"]
+    }
+  },
+  "exclude": ["node_modules", "dist"]
+}
