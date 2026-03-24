@@ -35,6 +35,18 @@ import type {
   DeviceResolver,
   DeviceStateChangedEvent,
 } from "@clever/ha-bridge";
+import {
+  CleverOrchestrator,
+  LLMClient,
+  AgentManager,
+  ConversationManager,
+} from "@clever/orchestrator";
+import type {
+  OrchestratorRequest,
+  DeviceStateProvider,
+  DeviceStateInfo,
+  FamilyProfileLoader,
+} from "@clever/orchestrator";
 import { isReSpeakerPresent, LEDRing } from "./hardware/respeaker-config.js";
 import { isI2SBonnetPresent, VolumeControl } from "./hardware/audio-output.js";
 import {
@@ -243,6 +255,7 @@ export class PiAgent {
   private readonly discovery: DeviceDiscovery;
   private readonly commandExecutor: CommandExecutor;
   private readonly sceneExecutor: SceneExecutor;
+  private readonly orchestrator: CleverOrchestrator;
   private readonly ledRing: LEDRing;
   private readonly volumeControl: VolumeControl;
 
@@ -311,6 +324,116 @@ export class PiAgent {
       tenantId: this.config.tenantId,
     });
 
+    // Initialize orchestrator (Clever AI brain)
+    const groqApiKey = process.env["GROQ_API_KEY"] ?? "";
+    const claudeApiKey = process.env["ANTHROPIC_API_KEY"];
+
+    const llmClient = new LLMClient({
+      groq_api_key: groqApiKey,
+      claude_api_key: claudeApiKey,
+    });
+
+    const familyProfileLoader: FamilyProfileLoader = {
+      getProfileByAgentName: async (tenantId, agentName) => {
+        const { data } = await this.supabase
+          .from("family_member_profiles")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .ilike("agent_name", agentName)
+          .eq("is_active", true)
+          .maybeSingle();
+        return data;
+      },
+      getAllProfiles: async (tenantId) => {
+        const { data } = await this.supabase
+          .from("family_member_profiles")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .eq("is_active", true);
+        return data ?? [];
+      },
+      getOverrides: async (profileId) => {
+        const { data } = await this.supabase
+          .from("family_permission_overrides")
+          .select("*")
+          .eq("profile_id", profileId);
+        return data ?? [];
+      },
+      getSchedules: async (profileId) => {
+        const { data } = await this.supabase
+          .from("family_schedules")
+          .select("*")
+          .eq("profile_id", profileId)
+          .eq("is_active", true);
+        return data ?? [];
+      },
+      getSpendingLimit: async (profileId) => {
+        const { data } = await this.supabase
+          .from("family_spending_limits")
+          .select("*")
+          .eq("profile_id", profileId)
+          .maybeSingle();
+        return data;
+      },
+    };
+
+    const agentManager = new AgentManager(
+      familyProfileLoader,
+      llmClient,
+      this.config.tenantId,
+    );
+
+    const conversationManager = new ConversationManager(
+      this.supabase as unknown as import("@clever/orchestrator").SupabaseClient,
+    );
+
+    const deviceStateProvider: DeviceStateProvider = {
+      getAllDeviceStates: async (tenantId) => {
+        const { data } = await this.supabase
+          .from("devices")
+          .select("ha_entity_id, name, state, category, room, is_online, attributes, last_seen")
+          .eq("tenant_id", tenantId);
+        return (data ?? []).map((d: Record<string, unknown>) => ({
+          entity_id: d.ha_entity_id as string,
+          name: d.name as string,
+          state: (d.state as string) ?? "unknown",
+          category: (d.category as string) ?? "unknown",
+          room: (d.room as string) ?? "unknown",
+          is_online: (d.is_online as boolean) ?? false,
+          attributes: (d.attributes as Record<string, unknown>) ?? {},
+          last_changed: (d.last_seen as string) ?? "",
+        }));
+      },
+      getDeviceState: async (entityId) => {
+        const { data } = await this.supabase
+          .from("devices")
+          .select("ha_entity_id, name, state, category, room, is_online, attributes, last_seen")
+          .eq("ha_entity_id", entityId)
+          .maybeSingle();
+        if (!data) return null;
+        const d = data as Record<string, unknown>;
+        return {
+          entity_id: d.ha_entity_id as string,
+          name: d.name as string,
+          state: (d.state as string) ?? "unknown",
+          category: (d.category as string) ?? "unknown",
+          room: (d.room as string) ?? "unknown",
+          is_online: (d.is_online as boolean) ?? false,
+          attributes: (d.attributes as Record<string, unknown>) ?? {},
+          last_changed: (d.last_seen as string) ?? "",
+        };
+      },
+    };
+
+    this.orchestrator = new CleverOrchestrator({
+      llm: llmClient,
+      agentManager,
+      conversationManager,
+      commandExecutor: this.commandExecutor,
+      deviceStateProvider,
+      tenantId: this.config.tenantId,
+    });
+
     // Initialize hardware controllers
     this.ledRing = new LEDRing();
     this.volumeControl = new VolumeControl();
@@ -340,26 +463,34 @@ export class PiAgent {
     return this.volumeControl;
   }
 
+  getOrchestrator(): CleverOrchestrator {
+    return this.orchestrator;
+  }
+
   // -----------------------------------------------------------------------
   // Voice result handler — routes parsed intents to the correct executor
   // -----------------------------------------------------------------------
 
   /**
    * Handle a completed voice pipeline result.
-   * Routes intents to the appropriate executor based on domain:
-   *   - "scene" → SceneExecutor
-   *   - "shopping_list" → Shopping list CRUD via Supabase
-   *   - "pantry" → Pantry query via Supabase
-   *   - "kitchen" → Kitchen hub features (timers, recipes, scanning)
-   *   - everything else → CommandExecutor (device control)
    *
-   * @param intent  The parsed intent from the voice pipeline.
-   * @param userId  The user who issued the voice command.
+   * For Tier 1 (rules-matched) intents with known domains (scene, shopping,
+   * pantry, kitchen, simple device commands), executes directly for speed.
+   *
+   * For everything else, delegates to the Clever orchestrator which handles
+   * triage, family agent delegation, multi-turn context, and complex tasks.
+   *
+   * @param intent     The parsed intent from the voice pipeline.
+   * @param userId     The user who issued the voice command.
+   * @param agentName  Optional agent name (from wake word detection).
+   * @param tier1Match Whether this was matched by Tier 1 rules engine.
    * @returns Execution result with state changes and any errors.
    */
   async handleVoiceResult(
     intent: ParsedIntent,
     userId: UserId,
+    agentName?: string,
+    tier1Match?: boolean,
   ): Promise<{
     success: boolean;
     stateChanges: DeviceStateChange[];
@@ -369,60 +500,107 @@ export class PiAgent {
   }> {
     const start = Date.now();
 
-    // Scene activation: route to SceneExecutor
-    if (intent.domain === "scene" && intent.parameters["scene"]) {
-      const sceneName = intent.parameters["scene"] as string;
-      const result = await this.sceneExecutor.executeBuiltin(
-        sceneName,
+    // -----------------------------------------------------------------------
+    // Tier 1 fast path: known domains with pre-parsed intents
+    // These bypass the orchestrator for sub-200ms latency.
+    // -----------------------------------------------------------------------
+    if (tier1Match) {
+      // Scene activation: route to SceneExecutor
+      if (intent.domain === "scene" && intent.parameters["scene"]) {
+        const sceneName = intent.parameters["scene"] as string;
+        const result = await this.sceneExecutor.executeBuiltin(
+          sceneName,
+          userId,
+          "voice",
+        );
+
+        await this.logAudit("scene_activated", userId, null, {
+          scene: sceneName,
+          success: result.success,
+          duration_ms: result.durationMs,
+        });
+
+        return {
+          success: result.success,
+          stateChanges: result.stateChanges,
+          errors: result.errors,
+          durationMs: result.durationMs,
+        };
+      }
+
+      // Shopping list commands
+      if (intent.domain === "shopping_list") {
+        return this.handleShoppingListIntent(intent, userId, start);
+      }
+
+      // Pantry commands
+      if (intent.domain === "pantry") {
+        return this.handlePantryIntent(intent, userId, start);
+      }
+
+      // Kitchen commands
+      if (intent.domain === "kitchen") {
+        return this.handleKitchenIntent(intent, userId, start);
+      }
+
+      // Simple device command via Tier 1 — execute directly
+      const result = await this.commandExecutor.execute(intent, userId, "voice");
+
+      await this.logAudit(
+        "device_command_issued",
         userId,
-        "voice",
+        result.stateChanges[0]?.device_id ?? null,
+        {
+          domain: intent.domain,
+          action: intent.action,
+          success: result.success,
+          duration_ms: result.durationMs,
+          tier: "tier1_rules",
+        },
       );
 
-      await this.logAudit("scene_activated", userId, null, {
-        scene: sceneName,
-        success: result.success,
-        duration_ms: result.durationMs,
-      });
-
-      return {
-        success: result.success,
-        stateChanges: result.stateChanges,
-        errors: result.errors,
-        durationMs: result.durationMs,
-      };
+      return result;
     }
 
-    // Shopping list commands
-    if (intent.domain === "shopping_list") {
-      return this.handleShoppingListIntent(intent, userId, start);
-    }
+    // -----------------------------------------------------------------------
+    // Orchestrator path: Tier 2/3 or ambiguous commands
+    // Clever triages, delegates to family agents, handles complex tasks.
+    // -----------------------------------------------------------------------
+    const orchestratorRequest: OrchestratorRequest = {
+      message: intent.raw_transcript,
+      user_id: userId,
+      tenant_id: this.config.tenantId,
+      agent_name: agentName ?? "clever",
+      source: "voice",
+      pre_parsed_intent: intent,
+    };
 
-    // Pantry commands
-    if (intent.domain === "pantry") {
-      return this.handlePantryIntent(intent, userId, start);
-    }
-
-    // Kitchen commands (timers, recipes, scanning) — delegated to kitchen hub
-    if (intent.domain === "kitchen") {
-      return this.handleKitchenIntent(intent, userId, start);
-    }
-
-    // Device command: route to CommandExecutor
-    const result = await this.commandExecutor.execute(intent, userId, "voice");
+    const orchestratorResponse = await this.orchestrator.handleRequest(
+      orchestratorRequest,
+    );
 
     await this.logAudit(
-      "device_command_issued",
+      "orchestrator_request",
       userId,
-      result.stateChanges[0]?.device_id ?? null,
+      orchestratorResponse.state_changes[0]?.device_id ?? null,
       {
-        domain: intent.domain,
-        action: intent.action,
-        success: result.success,
-        duration_ms: result.durationMs,
+        triage_category: orchestratorResponse.triage_category,
+        agent_name: agentName ?? "clever",
+        device_actions: orchestratorResponse.device_actions,
+        latency_ms: orchestratorResponse.latency_ms,
+        permission_denied: orchestratorResponse.permission_denied,
       },
     );
 
-    return result;
+    return {
+      success: !orchestratorResponse.permission_denied,
+      stateChanges: orchestratorResponse.state_changes,
+      errors: orchestratorResponse.permission_denied
+        ? [orchestratorResponse.denial_message ?? "Permission denied"]
+        : [],
+      durationMs: Date.now() - start,
+      responseText: orchestratorResponse.message,
+    };
   }
 
   // -----------------------------------------------------------------------

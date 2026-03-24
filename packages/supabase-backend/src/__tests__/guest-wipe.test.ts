@@ -28,11 +28,11 @@ import { REQUIRED_WIPE_CATEGORIES } from "@clever/shared";
 // ---------------------------------------------------------------------------
 
 const SUPABASE_URL = process.env["SUPABASE_URL"] ?? "http://127.0.0.1:54321";
-const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] ?? "test-anon-key";
+const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] ?? "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
 const SUPABASE_SERVICE_ROLE_KEY =
-  process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "test-service-role-key";
+  process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "";
 
-const TEST_TENANT_ID = "00000000-wipe-test-0000-000000000001" as unknown as TenantId;
+const TEST_TENANT_ID = "00000000-0000-4000-a000-000000000099" as unknown as TenantId;
 
 function serviceClient(): SupabaseClient {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
@@ -156,26 +156,25 @@ async function performCategoryWipe(
 ): Promise<void> {
   switch (category) {
     case "locks":
-      // Reset door codes — update guest_profiles.door_code to empty
+      // Reset door codes
       await admin
         .from("guest_profiles")
-        .update({ door_code: "" })
+        .update({ door_code_encrypted: "" })
         .eq("tenant_id", tenantId)
         .eq("reservation_id", reservationId);
       break;
 
     case "wifi":
-      // Rotate WiFi password — update guest_profiles.wifi_password to empty
+      // Rotate WiFi password
       await admin
         .from("guest_profiles")
-        .update({ wifi_password: "" })
+        .update({ wifi_password_encrypted: "" })
         .eq("tenant_id", tenantId)
         .eq("reservation_id", reservationId);
       break;
 
     case "voice_history":
       // Delete voice sessions and transcripts for this tenant/reservation period
-      // In production, this joins on user_id from the reservation
       await admin
         .from("voice_transcripts")
         .delete()
@@ -190,7 +189,7 @@ async function performCategoryWipe(
       // Clear TV login credentials
       await admin
         .from("guest_profiles")
-        .update({ tv_logins: [] })
+        .update({ tv_logins_encrypted: [] })
         .eq("tenant_id", tenantId)
         .eq("reservation_id", reservationId);
       break;
@@ -224,8 +223,12 @@ async function performCategoryWipe(
 // Test fixtures
 // ---------------------------------------------------------------------------
 
-const RESERVATION_ID = "res-wipe-test-001";
-const GUEST_PROFILE_ID = "gp-wipe-test-001";
+const RESERVATION_ID = "00000000-0000-4000-b001-000000000001";
+const GUEST_PROFILE_ID = "00000000-0000-4000-b002-000000000001";
+
+// Test helper user and device UUIDs (needed for voice session FK constraints)
+const TEST_USER_ID = "00000000-0000-4000-b003-000000000001";
+const TEST_DEVICE_ID = "00000000-0000-4000-b004-000000000001";
 
 let admin: SupabaseClient;
 
@@ -246,22 +249,46 @@ beforeAll(async () => {
       audit_retention_days: 90,
     },
   });
+
+  // Seed a test user (needed for voice_sessions FK)
+  await admin.from("users").upsert({
+    id: TEST_USER_ID,
+    tenant_id: TEST_TENANT_ID,
+    email: "wipe-test-user@test.clever.local",
+    role: "resident",
+    display_name: "Wipe Test User",
+  });
+
+  // Seed a test device (needed for voice_sessions FK)
+  await admin.from("devices").upsert({
+    id: TEST_DEVICE_ID,
+    tenant_id: TEST_TENANT_ID,
+    ha_entity_id: "light.wipe_test",
+    name: "Wipe Test Light",
+    category: "light",
+    room: "living_room",
+    floor: "1",
+    state: "on",
+    attributes: {},
+    is_online: true,
+    last_seen: new Date().toISOString(),
+  });
 });
 
 beforeEach(async () => {
   // Clean up any previous test data
+  await admin.from("audit_logs").delete().eq("tenant_id", TEST_TENANT_ID);
   await admin.from("guest_wipe_checklists").delete().eq("tenant_id", TEST_TENANT_ID);
   await admin.from("guest_profiles").delete().eq("tenant_id", TEST_TENANT_ID);
   await admin.from("reservations").delete().eq("tenant_id", TEST_TENANT_ID);
   await admin.from("voice_transcripts").delete().eq("tenant_id", TEST_TENANT_ID);
   await admin.from("voice_sessions").delete().eq("tenant_id", TEST_TENANT_ID);
 
-  // Seed a fresh reservation and guest profile for each test
+  // Insert reservation first (without guest_profile_id to avoid circular FK)
   await admin.from("reservations").insert({
     id: RESERVATION_ID,
     tenant_id: TEST_TENANT_ID,
     property_id: "prop-wipe-1",
-    guest_profile_id: GUEST_PROFILE_ID,
     platform: "airbnb",
     check_in: "2026-02-01T15:00:00Z",
     check_out: "2026-02-05T11:00:00Z",
@@ -274,16 +301,21 @@ beforeEach(async () => {
     tenant_id: TEST_TENANT_ID,
     reservation_id: RESERVATION_ID,
     display_name: "Jane Doe",
-    wifi_password: "guest-wifi-secret-123",
-    door_code: "4567",
+    wifi_password_encrypted: "guest-wifi-secret-123",
+    door_code_encrypted: "4567",
     voice_preferences: { language: "en", volume: "loud" },
-    tv_logins: [
+    tv_logins_encrypted: [
       { service: "netflix", encrypted_data: "ENC::netflix-creds" },
       { service: "hulu", encrypted_data: "ENC::hulu-creds" },
     ],
     custom_preferences: { theme: "dark", wake_word: "hey butler" },
     expires_at: "2026-02-05T11:00:00Z",
   });
+
+  // Now link the guest profile back to the reservation
+  await admin.from("reservations").update({
+    guest_profile_id: GUEST_PROFILE_ID,
+  }).eq("id", RESERVATION_ID);
 });
 
 afterAll(async () => {
@@ -291,6 +323,10 @@ afterAll(async () => {
   await admin.from("guest_wipe_checklists").delete().eq("tenant_id", TEST_TENANT_ID);
   await admin.from("guest_profiles").delete().eq("tenant_id", TEST_TENANT_ID);
   await admin.from("reservations").delete().eq("tenant_id", TEST_TENANT_ID);
+  await admin.from("voice_transcripts").delete().eq("tenant_id", TEST_TENANT_ID);
+  await admin.from("voice_sessions").delete().eq("tenant_id", TEST_TENANT_ID);
+  await admin.from("devices").delete().eq("tenant_id", TEST_TENANT_ID);
+  await admin.from("users").delete().eq("tenant_id", TEST_TENANT_ID);
   await admin.from("tenants").delete().eq("id", TEST_TENANT_ID);
 });
 
@@ -353,11 +389,11 @@ describe("All 6 Wipe Categories Are Cleared", () => {
 
     const { data: profile } = await admin
       .from("guest_profiles")
-      .select("door_code")
+      .select("door_code_encrypted")
       .eq("id", GUEST_PROFILE_ID)
       .single();
 
-    expect(profile?.door_code).toBe("");
+    expect(profile?.door_code_encrypted).toBe("");
   });
 
   it("wifi wipe rotates WiFi password", async () => {
@@ -365,23 +401,25 @@ describe("All 6 Wipe Categories Are Cleared", () => {
 
     const { data: profile } = await admin
       .from("guest_profiles")
-      .select("wifi_password")
+      .select("wifi_password_encrypted")
       .eq("id", GUEST_PROFILE_ID)
       .single();
 
-    expect(profile?.wifi_password).toBe("");
-    expect(profile?.wifi_password).not.toBe("guest-wifi-secret-123");
+    expect(profile?.wifi_password_encrypted).toBe("");
+    expect(profile?.wifi_password_encrypted).not.toBe("guest-wifi-secret-123");
   });
 
   it("voice_history wipe removes all voice sessions and transcripts", async () => {
+    const vsId = "00000000-0000-4000-b005-000000000001";
+    const vtId = "00000000-0000-4000-b006-000000000001";
     // First, seed some voice data
     await admin.from("voice_sessions").insert({
-      id: "vs-wipe-test-001",
+      id: vsId,
       tenant_id: TEST_TENANT_ID,
-      user_id: "guest-user",
-      device_id: "d-wipe-test-001",
+      user_id: TEST_USER_ID,
+      device_id: TEST_DEVICE_ID,
       tier: "tier1_rules",
-      transcript: "turn off lights",
+      transcript_encrypted: "turn off lights",
       response_text: "Done",
       stages: [],
       total_latency_ms: 100,
@@ -390,10 +428,10 @@ describe("All 6 Wipe Categories Are Cleared", () => {
     });
 
     await admin.from("voice_transcripts").insert({
-      id: "vt-wipe-test-001",
-      session_id: "vs-wipe-test-001",
+      id: vtId,
+      session_id: vsId,
       tenant_id: TEST_TENANT_ID,
-      user_id: "guest-user",
+      user_id: TEST_USER_ID,
       transcript_encrypted: "ENC::base64data",
       intent_summary: "Turn off lights",
       tier_used: "tier1_rules",
@@ -420,11 +458,11 @@ describe("All 6 Wipe Categories Are Cleared", () => {
 
     const { data: profile } = await admin
       .from("guest_profiles")
-      .select("tv_logins")
+      .select("tv_logins_encrypted")
       .eq("id", GUEST_PROFILE_ID)
       .single();
 
-    expect(profile?.tv_logins).toEqual([]);
+    expect(profile?.tv_logins_encrypted).toEqual([]);
   });
 
   it("preferences wipe resets all custom preferences", async () => {
@@ -647,15 +685,15 @@ describe("No Personal Data Accessible After Wipe", () => {
     expect(profile!.display_name).not.toBe("Jane Doe");
 
     // WiFi password should be cleared
-    expect(profile!.wifi_password).toBe("");
-    expect(profile!.wifi_password).not.toBe("guest-wifi-secret-123");
+    expect(profile!.wifi_password_encrypted).toBe("");
+    expect(profile!.wifi_password_encrypted).not.toBe("guest-wifi-secret-123");
 
     // Door code should be cleared
-    expect(profile!.door_code).toBe("");
-    expect(profile!.door_code).not.toBe("4567");
+    expect(profile!.door_code_encrypted).toBe("");
+    expect(profile!.door_code_encrypted).not.toBe("4567");
 
     // TV logins should be empty
-    expect(profile!.tv_logins).toEqual([]);
+    expect(profile!.tv_logins_encrypted).toEqual([]);
 
     // Preferences should be empty
     expect(profile!.voice_preferences).toEqual({});
@@ -663,14 +701,16 @@ describe("No Personal Data Accessible After Wipe", () => {
   });
 
   it("no voice transcripts remain after wipe", async () => {
+    const vsId = "00000000-0000-4000-b007-000000000001";
+    const vtId = "00000000-0000-4000-b008-000000000001";
     // Seed voice data
     await admin.from("voice_sessions").insert({
-      id: "vs-nodata-001",
+      id: vsId,
       tenant_id: TEST_TENANT_ID,
-      user_id: "guest-user",
-      device_id: "d-test",
+      user_id: TEST_USER_ID,
+      device_id: TEST_DEVICE_ID,
       tier: "tier2_cloud",
-      transcript: "what is my wifi password",
+      transcript_encrypted: "what is my wifi password",
       response_text: "Your wifi password is...",
       stages: [],
       total_latency_ms: 500,
@@ -679,10 +719,10 @@ describe("No Personal Data Accessible After Wipe", () => {
     });
 
     await admin.from("voice_transcripts").insert({
-      id: "vt-nodata-001",
-      session_id: "vs-nodata-001",
+      id: vtId,
+      session_id: vsId,
       tenant_id: TEST_TENANT_ID,
-      user_id: "guest-user",
+      user_id: TEST_USER_ID,
       transcript_encrypted: "ENC::sensitive-transcript",
       intent_summary: "WiFi password query",
       tier_used: "tier2_cloud",

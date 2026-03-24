@@ -29,33 +29,38 @@ Power: USB-C (5V) or battery with deep sleep for sensor-only nodes
 
 Voice Pipeline (LATENCY-CRITICAL - sub-1-second target)
 This is the most important architectural component. Every design decision prioritizes latency.
-Three-tier hybrid system:
-Tier 1: Instant Rules Engine (50-200ms) - handles ~70% of commands
+
+Intent Extraction Strategy:
+Groq LLM is the PRIMARY intent extraction path for both the Pi hub voice pipeline and the mobile app. The regex/keyword rules engine proved unreliable for natural speech variations and is now an OFFLINE-ONLY fallback. HA Conversation API is NOT used (15-30s latency).
+
+Two-tier system (cloud primary, local offline fallback):
+
+On-Device (ESP32-S3 satellites only): ESP-SR MultiNet (up to 200 commands)
 
 ESP-SR MultiNet on-device speech command recognition on ESP32-S3 satellites (up to 200 commands, no cloud needed, free with Espressif silicon). Handles lights, locks, thermostat, scenes directly on the satellite with zero Pi involvement for the most common commands.
-Regex pattern matching on partial STT for commands that reach the Pi hub
-Direct Home Assistant API calls for device control
-Examples: "turn off lights", "set temp to 72", "lock front door"
+This is the ONLY place where pattern-based matching is the primary path — it runs on embedded hardware that cannot run an LLM.
 
-Tier 2: Cloud Streaming Pipeline (580-900ms) - handles ~20% of commands
+Primary: Groq LLM Cloud Pipeline (500-900ms) - handles ~90% of commands that reach Pi/mobile
 
 Wake word: microWakeWord on ESP32-S3 satellites (ESPHome native, <10ms, Apache 2.0) or openWakeWord on Pi hub (Python, Apache 2.0)
 STT: Deepgram Nova-3 DIRECT API (streaming WebSocket, ~150ms first tokens)
-LLM: Groq DIRECT API (LPU hardware, ~200ms TTFT, 500+ tok/s)
-TTS: Cartesia Sonic 3 DIRECT API (streaming, ~100ms first audio)
-All stages stream and overlap. TTS starts before LLM finishes.
+LLM: Groq DIRECT API (LPU hardware, ~200ms TTFT, 500+ tok/s) — intent extraction + response generation
+TTS: Cartesia Sonic 3 DIRECT API (streaming, ~100ms first audio) — Pi hub only, mobile app skips TTS
+All stages stream and overlap on Pi hub. TTS starts before LLM finishes.
+Mobile app uses non-streaming Groq call for intent extraction only (~200-400ms).
 
-Tier 3: Local Fallback (3-5s) - handles ~10% / offline
+Offline Fallback (3-5s) - when cloud is unreachable
 
-STT: Faster-Whisper base.en (local)
-LLM: Qwen2.5 1.5B or Phi-2 at Q4_K_M via llama.cpp (4-8 tok/s)
-TTS: Piper TTS medium quality (local)
+Pi hub: Faster-Whisper STT → local LLM (llama.cpp) → Piper TTS → regex rules engine as last resort
+Mobile app: keyword-based action detection + fuzzy entity matching → direct HA service calls
+Regex/keyword rules are ONLY used in offline mode. They are NOT the primary intent path.
 
 CRITICAL RULES:
 
-Voice hot path (Tier 2) uses DIRECT APIs to Deepgram, Groq, Cartesia. NEVER route voice through OpenRouter. OpenRouter adds 25x latency overhead in benchmarks.
+Groq LLM is the PRIMARY intent extraction path. Regex/keyword rules are OFFLINE-ONLY fallback. The rules engine proved unreliable for natural speech variations — do NOT add new regex rules or promote the rules engine back to primary.
+Voice hot path uses DIRECT APIs to Deepgram, Groq, Cartesia. NEVER route voice through OpenRouter. OpenRouter adds 25x latency overhead in benchmarks.
 OpenRouter is ONLY for: background queries, analytics, model A/B testing, and LLM fallback if Groq is down.
-Home Assistant's built-in Assist voice pipeline is NOT USED. It has 15-30s latency due to orchestration overhead. We use HA only as the device control layer via REST/WebSocket API.
+Home Assistant's built-in Assist voice pipeline and Conversation API are NOT USED. They have 15-30s latency due to orchestration overhead. We use HA only as the device control layer via REST/WebSocket API.
 NO PICOVOICE. Picovoice (Porcupine/Rhino) is proprietary with commercial licensing starting at $899/mo. Use microWakeWord (Apache 2.0, ESPHome native) for wake word and ESP-SR MultiNet (free with Espressif silicon) for on-device command recognition instead. openWakeWord (Apache 2.0) for Pi hub wake word.
 
 Cloud Backend
@@ -67,9 +72,21 @@ TimescaleDB extension for sensor telemetry time-series data
 
 Frontend
 
-Web: React / Next.js admin dashboard
-Mobile: React Native (iOS + Android)
+Web: React / Next.js admin dashboard (packages/web-dashboard)
+Mobile: React Native / Expo (packages/mobile-app)
 Both connect via Supabase client SDK (auth, realtime subscriptions)
+
+Design System:
+- Warm gold/amber theme (#D4A843 primary, #FDF6E3 cream background, #1F1F1F charcoal sidebar)
+- Tailwind CSS with CSS custom properties for white-label theming (web)
+- React Native StyleSheet with hardcoded gold palette (mobile)
+- WCAG AAA high-contrast variant for CleverAide assisted living screens
+
+Vertical-Aware UX:
+- Onboarding is a 2-step flow: Step 1 = visual vertical card selector (3 large cards with icons/features), Step 2 = property details
+- Navigation adapts per vertical: CleverHome shows "Family", CleverHost shows "Users" + "Guests", CleverBuilding shows "Users"
+- Dashboard shows vertical-specific sections: family member cards (Home), guest check-in stats (Host)
+- Sidebar branding shows vertical-specific icon and label
 
 Market Verticals
 
@@ -90,6 +107,84 @@ Guest profile wipe between Airbnb stays must be complete: locks, WiFi, voice his
 Rate limiting on all device command endpoints (prevent brute-force/abuse).
 Full audit logging: every device state change logged with timestamp, user, tenant, device.
 Intent confidence threshold: voice commands below 0.7 confidence require confirmation.
+Family permission checks: every device command from a non-adult family member must pass through the FamilyPermissionResolver before execution.
+Emergency commands must bypass all permission restrictions for all ages.
+Parental notifications must be generated for permission denials and emergency commands from child profiles.
+
+Family Subagent System
+Each family member gets a named personal agent (e.g., "Hey Jarvis", "Hey Luna", "Hey Buddy") with age-based permissions layered on top of the existing 5-level role system. The FamilyAgeGroup enum (adult, teenager, tween, child, toddler, adult_visitor) provides fine-grained application-level permission control resolved at command execution time. The existing UserRole remains the RLS security boundary.
+
+Age Group Tiers:
+- adult (18+): Full permissions, maps to owner/admin role
+- teenager (15-17): Near-adult, no locks/cameras/spending, maps to resident role
+- tween (10-14): Own-room focused, PG content, maps to resident role
+- child (5-9): Own-room lights only, G content, maps to guest role
+- toddler (2-4): Zero device control, conversational companion only, maps to guest role
+- adult_visitor: Scoped to explicitly-allowed devices, time-limited, maps to guest role
+- assisted_living: Elderly/disabled users with caregiver support, full device access, purchases require caregiver approval, maps to resident role
+
+Permission Resolution Priority (highest to lowest):
+1. Emergency commands → always pass (all ages, all roles)
+2. Explicit per-device override → parent specifically allowed/denied
+3. Active schedule restriction → bedtime/school blocks override defaults
+4. Per-category override → parent allowed/denied whole category
+5. Per-room override → parent allowed/denied all devices in room
+6. Age-group default matrix → baseline permissions
+
+Voice Routing:
+- Each agent name is a registered wake word on ESP32-S3 satellites
+- Wake word → WakeWordRegistry lookup → load profile + permissions + schedules
+- LLM system prompt is scoped to the member's personality, allowed devices, and restrictions
+- TTS responds in the agent's configured Cartesia voice
+- Generic "Clever" wake word still works as fallback
+
+Safety Rules:
+- Emergency commands ("help", "fire", "hurt") bypass ALL permissions for ALL ages
+- Toddler agents have zero device control — they are conversational companions (stories, songs, animal sounds)
+- Constraint clamping: parameters silently adjusted to limits (temp range, volume cap, brightness)
+- Parental notifications generated on permission denials, override attempts, and emergencies
+- Schedules (bedtime, school hours, quiet time) enforce time-based restrictions automatically
+
+Key Files:
+- Migration: packages/supabase-backend/src/migrations/004_family_subagents.sql
+- Types: packages/shared/src/types/family.ts
+- Permission resolver: packages/shared/src/permissions/family-permissions.ts
+- Default matrices: packages/shared/src/permissions/default-matrices.ts
+- Web UI: packages/web-dashboard/src/app/dashboard/family/page.tsx (tabbed: Members, Permissions, Schedules, Spending)
+- Mobile UI: packages/mobile-app/src/screens/FamilyScreen.tsx (segmented control with same 4 sections)
+
+CleverAide System (Assisted Living)
+The assisted_living age group extends the family subagent system with care-specific features for elderly and disabled users. An aide_profiles companion table (1:1 with family_member_profiles) stores medical info, emergency contacts, accessibility levels, and interaction preferences.
+
+Features:
+- Medication management: scheduled reminders via voice with confirmation tracking (taken/skipped/missed)
+- Wellness check-ins: 3x daily proactive conversations assessing mood, pain, and needs
+- Inactivity monitoring: HA motion sensors detect prolonged inactivity during waking hours
+- Caregiver alerts: unified alert queue with severity escalation and multi-channel delivery (push, Telegram, WhatsApp, SMS)
+- Fall assessment: "I fell" triggers assessment flow (not immediate emergency) to reduce false positives
+- Enhanced emergency: reads medical info aloud, contacts caregivers, stays conversational
+- Simplified mobile UI: 3-tab navigator (Home/Talk/Help) with large text, SOS button, WCAG AAA
+- Messaging integration: Telegram bot and WhatsApp Business API for caregiver alerts and remote commands
+- Proactive speech: Pi Agent can initiate voice without wake word for reminders and check-ins
+- TTS pacing: Cartesia speed parameter adjusted for hearing level (slower pace, louder volume)
+
+Confirmation Mode (aide_profiles.confirmation_mode):
+- "always": requires verbal confirmation before every device command
+- "safety_only": confirmation only for locks, thermostat, climate, covers
+- "never": no extra confirmation (standard behavior)
+
+Key Files:
+- Migration: packages/supabase-backend/src/migrations/006_cleveraide.sql
+- Types: packages/shared/src/types/aide.ts
+- Edge Functions: packages/supabase-backend/src/edge-functions/aide-wellness.ts, aide-alerts.ts
+- Orchestrator prompts: packages/orchestrator/src/system-prompts.ts (buildAideAgentSystemPrompt)
+- HA Monitor: packages/ha-bridge/src/aide-monitor.ts
+- Pi Agent crons: packages/pi-agent/src/cron/aide-medication-cron.ts, aide-checkin-cron.ts
+- Proactive speech: packages/pi-agent/src/aide-proactive.ts
+- Mobile screens: packages/mobile-app/src/screens/aide/
+- Messaging: packages/messaging/src/telegram.ts, whatsapp.ts
+- Webhook: packages/supabase-backend/src/edge-functions/messaging-webhook.ts
+- Wake word registry: packages/voice-pipeline/src/orchestrator/wake-word-registry.ts
 
 Code Standards
 
@@ -100,18 +195,20 @@ All Supabase operations through client SDK (never raw SQL in application code)
 Environment variables via .env files (never committed, .env.example committed)
 Every voice pipeline component must have latency benchmark tests
 Every RLS policy must have a cross-tenant access test proving isolation
+Family permission checks must add less than 50ms to voice pipeline latency
 
 Monorepo Structure
 packages/
+  orchestrator/       # Clever AI orchestrator: triage, family agents, conversation manager, LLM client
   voice-pipeline/     # Streaming voice: wake word, STT, LLM, TTS, tier routing
   ha-bridge/          # Home Assistant REST/WebSocket client, device registration
   supabase-backend/   # Schema, migrations, RLS policies, Edge Functions
   web-dashboard/      # Next.js admin dashboard
-  mobile-app/         # React Native iOS/Android app
+  mobile-app/         # React Native iOS/Android app (includes chat + voice UI)
   pi-agent/           # Raspberry Pi device agent, hardware config, deployment
   kitchen-hub/        # Kitchen Sub-Hub: ePantry, shopping list, receipt/barcode scanning, timers
   esp32-satellite/    # ESP32-S3 room node firmware (ESPHome configs + custom components)
-  shared/             # Shared TypeScript types, utils, constants
+  shared/             # Shared TypeScript types, utils, constants, permission engine
 hardware/             # BOM, enclosure CAD, wiring diagrams
 docs/                 # Architecture docs, API specs, market research
 File Ownership (CRITICAL for Agent Teams)
@@ -132,7 +229,7 @@ ESP32-S3 Room Satellites: Firmware for distributed wake word (microWakeWord), on
 Moshi speech-to-speech: Kyutai Labs model (CC-BY 4.0), 160-200ms latency, requires cloud GPU. Economics break even at ~30-50 devices. Design voice pipeline interface to be swappable.
 Kyutai Pocket TTS: 100M param, runs on CPU in real-time. Could replace Cartesia for local TTS.
 Property management API integration: Guesty/Hospitable for Airbnb host features (no direct Airbnb API access available).
-Speaker identification: Voice biometrics for multi-occupant attribution (which person spoke, not just which room).
+Speaker identification: Voice biometrics for multi-occupant attribution (which person spoke, not just which room). Phase 1 workaround: named agent wake words ("Hey Jarvis", "Hey Luna") provide user identification via wake word selection. Phase 2 adds true voice biometrics for automatic identification.
 TensorFlow Lite Micro on ESP32-S3: Edge AI for doorbell face detection, gesture recognition, sensor anomaly detection.
 
 Key API Docs

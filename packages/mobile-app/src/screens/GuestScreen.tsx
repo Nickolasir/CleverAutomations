@@ -16,7 +16,7 @@ import type {
   GuestWipeChecklist,
   GuestWipeCategory,
 } from "@clever/shared";
-import { useAuthContext } from "../../App";
+import { useAuthContext } from "../lib/auth-context";
 import { supabase } from "../lib/supabase";
 
 type ReservationStatus = Reservation["status"];
@@ -259,7 +259,7 @@ export default function GuestScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={onRefresh}
-            tintColor="#2563eb"
+            tintColor="#D4A843"
           />
         }
         contentContainerStyle={styles.listContent}
@@ -446,14 +446,14 @@ export default function GuestScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#FDF6E3",
   },
   centerContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     padding: 24,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#FDF6E3",
   },
   unavailableText: {
     fontSize: 14,
@@ -505,7 +505,7 @@ const styles = StyleSheet.create({
   reservationDates: {
     fontSize: 15,
     fontWeight: "600",
-    color: "#0f172a",
+    color: "#1a1a1a",
   },
   reservationMeta: {
     fontSize: 13,
@@ -541,7 +541,7 @@ const styles = StyleSheet.create({
   },
   modalContent: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#FDF6E3",
     padding: 20,
   },
   closeButton: {
@@ -553,7 +553,7 @@ const styles = StyleSheet.create({
   closeButtonText: {
     fontSize: 16,
     fontWeight: "600",
-    color: "#2563eb",
+    color: "#D4A843",
   },
   detailSection: {
     backgroundColor: "#ffffff",
@@ -566,7 +566,7 @@ const styles = StyleSheet.create({
   detailTitle: {
     fontSize: 16,
     fontWeight: "700",
-    color: "#0f172a",
+    color: "#1a1a1a",
     marginBottom: 14,
   },
   detailRow: {
@@ -583,7 +583,7 @@ const styles = StyleSheet.create({
   detailValue: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#0f172a",
+    color: "#1a1a1a",
   },
   monoText: {
     fontFamily: "monospace",
@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
     marginTop: 14,
     padding: 12,
     borderRadius: 10,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#FDF6E3",
     alignItems: "center",
   },
   wipeCompletionText: {

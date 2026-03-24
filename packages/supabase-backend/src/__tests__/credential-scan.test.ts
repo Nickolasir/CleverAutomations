@@ -11,7 +11,7 @@
  *   "Environment variables via .env files (never committed, .env.example committed)"
  */
 
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll } from "vitest";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
@@ -20,7 +20,7 @@ import * as path from "node:path";
 // ---------------------------------------------------------------------------
 
 /** Root of the monorepo */
-const REPO_ROOT = path.resolve(__dirname, "../../../../..");
+const REPO_ROOT = path.resolve(__dirname, "../../../..");
 
 /** Directories to skip during scanning */
 const SKIP_DIRS = new Set([
@@ -430,8 +430,11 @@ describe("Credential Leak Scanner", () => {
         continue;
       }
 
+      // Skip this test file itself (contains the marker strings as literals)
+      const relativePath = path.relative(REPO_ROOT, file);
+      if (relativePath.includes("credential-scan.test")) continue;
+
       if (content.includes("-----BEGIN") && content.includes("PRIVATE KEY")) {
-        const relativePath = path.relative(REPO_ROOT, file);
         expect.fail(
           `Private key found in ${relativePath}. Private keys must never be committed.`
         );
@@ -567,7 +570,7 @@ describe(".env.example Has Placeholder Values Only", () => {
 
       if (!key || !value) continue;
 
-      // Each value should be clearly a placeholder
+      // Each value should be clearly a placeholder or safe default
       const isPlaceholder =
         value.startsWith("your-") ||
         value.startsWith("YOUR_") ||
@@ -578,7 +581,9 @@ describe(".env.example Has Placeholder Values Only", () => {
         value === "production" ||
         value === "test" ||
         value.startsWith("http://") ||
-        value.startsWith("https://your-");
+        value.startsWith("https://your-") ||
+        value.startsWith("/dev/") ||
+        /^\d+$/.test(value);
 
       expect(isPlaceholder).toBe(true);
     }

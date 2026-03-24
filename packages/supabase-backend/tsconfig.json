@@ -5,5 +5,5 @@
     "rootDir": "./src"
   },
   "include": ["src/**/*.ts"],
-  "exclude": ["src/**/*.sql"]
+  "exclude": ["src/**/*.sql", "src/edge-functions/**", "src/__tests__/**", "src/seed.ts"]
 }

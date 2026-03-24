@@ -5,3 +5,6 @@ export * from "./guest.js";
 export * from "./audit.js";
 export * from "./api.js";
 export * from "./kitchen.js";
+export * from "./family.js";
+export * from "./aide.js";
+export * from "./messaging.js";

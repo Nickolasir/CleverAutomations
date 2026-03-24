@@ -17,11 +17,11 @@ import type { TenantId, UserId, UserRole, JwtClaims } from "@clever/shared";
 // ---------------------------------------------------------------------------
 
 const SUPABASE_URL = process.env["SUPABASE_URL"] ?? "http://127.0.0.1:54321";
-const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] ?? "test-anon-key";
+const SUPABASE_ANON_KEY = process.env["SUPABASE_ANON_KEY"] ?? "sb_publishable_ACJWlzQHlZjBrEguHvfOxg_3BJgxAaH";
 const SUPABASE_SERVICE_ROLE_KEY =
-  process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "test-service-role-key";
+  process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "";
 
-const TEST_TENANT_ID = "00000000-auth-test-0000-000000000001";
+const TEST_TENANT_ID = "00000000-0000-4000-d000-000000000001";
 
 function serviceClient(): SupabaseClient {
   return createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {

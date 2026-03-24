@@ -94,8 +94,11 @@ function processVoiceCommand(
  */
 function encryptTranscript(plaintext: string, tenantKey: string): string {
   // Simulate encryption — in production this would be real AES-256-GCM
+  // Real AES-256-GCM always produces a nonce + ciphertext + auth tag,
+  // so even an empty plaintext produces non-empty output.
+  const nonce = Buffer.from(tenantKey.slice(0, 12).padEnd(12, "0")).toString("base64");
   const encoded = Buffer.from(plaintext).toString("base64");
-  return `ENC::v1::${encoded}`;
+  return `ENC::v1::${nonce}:${encoded}`;
 }
 
 function isEncrypted(data: string): boolean {
@@ -186,7 +189,7 @@ function sanitizeTranscript(rawTranscript: string): string {
 
   // Remove SQL-like injection patterns
   sanitized = sanitized.replace(
-    /\b(DROP|DELETE|INSERT|UPDATE|ALTER|EXEC|UNION|SELECT)\b/gi,
+    /\b(DROP|DELETE|INSERT|UPDATE|ALTER|EXEC|UNION|SELECT|TABLE|TRUNCATE|CREATE)\b/gi,
     ""
   );
 

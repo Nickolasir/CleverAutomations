@@ -11,7 +11,7 @@
  * OpenRouter fallback is ONLY activated if Groq direct API is down.
  */
 
-import type { VoiceTier, ParsedIntent } from "@clever/shared";
+import type { VoiceTier, ParsedIntent, FamilyVoiceContext } from "@clever/shared";
 import { matchRule, couldMatchRule } from "../tier1/rules-engine.js";
 
 // ---------------------------------------------------------------------------
@@ -108,11 +108,12 @@ export class TierRouter {
   /**
    * Determine which tier should handle a voice command.
    *
-   * @param transcript - The user's transcript (or empty string if not yet available)
-   * @param hasAudioOnly - True if only raw audio is available (no transcript yet)
+   * @param transcript    - The user's transcript (or empty string if not yet available)
+   * @param hasAudioOnly  - True if only raw audio is available (no transcript yet)
+   * @param familyContext - Optional family context (used for logging; does not affect tier selection)
    * @returns TierDecision with the selected tier and reasoning
    */
-  route(transcript: string, hasAudioOnly = false): TierDecision {
+  route(transcript: string, hasAudioOnly = false, _familyContext?: FamilyVoiceContext): TierDecision {
     // Force tier override for testing
     if (this.config.forceTier) {
       return {

@@ -112,13 +112,15 @@ export class GroqLLM extends EventEmitter<GroqLLMEvents> {
   /**
    * Send a transcript to Groq and stream the response.
    *
-   * @param transcript - The user's speech transcript from STT
-   * @param deviceContext - Optional device/room context to include in the prompt
+   * @param transcript    - The user's speech transcript from STT
+   * @param deviceContext - Optional device/room context to include in the prompt.
+   *                        When a family context is active, this includes the
+   *                        agent's personality directives and permission scope.
    * @returns The complete response text
    */
   async streamCompletion(
     transcript: string,
-    deviceContext?: string
+    deviceContext?: string,
   ): Promise<string> {
     this.abortController = new AbortController();
     const startTime = performance.now();

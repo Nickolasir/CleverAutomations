@@ -147,24 +147,6 @@ const RULES: readonly RulePattern[] = [
   // LOCK CONTROL
   // -----------------------------------------------------------------------
   {
-    id: "lock_door",
-    pattern: /^lock\s+(?:the\s+)?(.+?)(?:\s+door)?$/i,
-    domain: "lock",
-    action: "lock",
-    extract_params: (match: RegExpMatchArray): Record<string, unknown> => ({
-      door: normalizeRoom(match[1]!),
-    }),
-  },
-  {
-    id: "unlock_door",
-    pattern: /^unlock\s+(?:the\s+)?(.+?)(?:\s+door)?$/i,
-    domain: "lock",
-    action: "unlock",
-    extract_params: (match: RegExpMatchArray): Record<string, unknown> => ({
-      door: normalizeRoom(match[1]!),
-    }),
-  },
-  {
     id: "lock_all",
     pattern: /^lock\s+all\s+(?:the\s+)?doors?$/i,
     domain: "lock",
@@ -180,6 +162,24 @@ const RULES: readonly RulePattern[] = [
     action: "unlock",
     extract_params: (): Record<string, unknown> => ({
       door: "all",
+    }),
+  },
+  {
+    id: "lock_door",
+    pattern: /^lock\s+(?:the\s+)?(.+?)(?:\s+door)?$/i,
+    domain: "lock",
+    action: "lock",
+    extract_params: (match: RegExpMatchArray): Record<string, unknown> => ({
+      door: normalizeRoom(match[1]!),
+    }),
+  },
+  {
+    id: "unlock_door",
+    pattern: /^unlock\s+(?:the\s+)?(.+?)(?:\s+door)?$/i,
+    domain: "lock",
+    action: "unlock",
+    extract_params: (match: RegExpMatchArray): Record<string, unknown> => ({
+      door: normalizeRoom(match[1]!),
     }),
   },
 
@@ -582,12 +582,14 @@ export function couldMatchRule(partial: string): boolean {
     "goodbye",
     "add",
     "remove",
-    "what",
-    "what's",
+    "what can",
+    "what's on",
+    "what is on",
+    "what's expiring",
+    "what is expiring",
     "clear",
     "do we",
     "do i",
-    "is",
     "running",
     "how much",
     "how long",

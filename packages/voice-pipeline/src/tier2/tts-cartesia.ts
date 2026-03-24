@@ -34,6 +34,12 @@ export interface CartesiaTTSConfig {
   container?: "raw";
   /** Request timeout in ms (default: 15000) */
   timeoutMs?: number;
+  /**
+   * Speaking speed multiplier (0.5 = half speed, 1.0 = normal, 2.0 = double).
+   * CleverAide uses 0.7-0.8 for assisted_living profiles.
+   * Default: 1.0
+   */
+  speed?: number;
 }
 
 export interface CartesiaTTSEvents {
@@ -104,6 +110,7 @@ export class CartesiaTTS extends EventEmitter<CartesiaTTSEvents> {
       sampleRate: config.sampleRate ?? 16000,
       container: config.container ?? "raw",
       timeoutMs: config.timeoutMs ?? 15000,
+      speed: config.speed ?? 1.0,
     };
   }
 
@@ -165,7 +172,7 @@ export class CartesiaTTS extends EventEmitter<CartesiaTTSEvents> {
 
     const ctxId = contextId ?? `ctx_${++this.contextCounter}_${Date.now()}`;
 
-    const message: CartesiaContextOptions & { context_id: string; continue?: boolean } = {
+    const message: CartesiaContextOptions & { context_id: string; continue?: boolean; speed?: number } = {
       context_id: ctxId,
       model_id: this.config.model,
       voice: {
@@ -180,6 +187,11 @@ export class CartesiaTTS extends EventEmitter<CartesiaTTSEvents> {
       transcript: text,
       language: "en",
     };
+
+    // Apply speed adjustment (CleverAide uses slower pace for assisted_living)
+    if (this.config.speed !== 1.0) {
+      message.speed = this.config.speed;
+    }
 
     this.ws.send(JSON.stringify(message));
     return ctxId;

@@ -14,10 +14,23 @@
     "type-check": "turbo run type-check",
     "security-test": "turbo run security-test"
   },
+  "overrides": {
+    "react-native": {
+      "scheduler": "$scheduler"
+    }
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "scheduler": "0.24.0-canary-efb381bbf-20230505"
+  },
   "devDependencies": {
+    "@types/express": "^5.0.6",
     "@types/node": "^22.0.0",
     "eslint": "^8.57.1",
+    "express": "^5.2.1",
     "prettier": "^3.4.0",
+    "react-native": "^0.81.5",
     "turbo": "^2.3.0",
     "typescript": "^5.7.0"
   }

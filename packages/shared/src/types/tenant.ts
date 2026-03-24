@@ -40,6 +40,12 @@ export interface JwtClaims {
   tenant_id: TenantId;
   user_role: UserRole;
   device_scope?: string;
+  /** Family age group (set when user has a family_member_profile) */
+  family_age_group?: import("./family.js").FamilyAgeGroup;
+  /** Family member profile ID */
+  family_profile_id?: string;
+  /** Personal agent wake word name (e.g., "Jarvis", "Luna") */
+  agent_name?: string;
   iat: number;
   exp: number;
 }

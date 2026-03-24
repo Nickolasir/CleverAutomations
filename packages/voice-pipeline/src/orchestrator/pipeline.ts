@@ -5,11 +5,18 @@
  * TTS starts receiving tokens before LLM finishes generating.
  *
  * Processing flow:
- *   Audio -> [Wake Word] -> STT -> [Tier1 Rules Check] -> LLM -> TTS
- *                                                          |       |
- *                                                   (streaming overlap)
+ *   Audio -> [Wake Word] -> STT -> Groq LLM -> TTS
+ *                                     |           |
+ *                              (streaming overlap)
  *
- * Tier routing: Tier 1 (rules) -> Tier 2 (cloud) -> Tier 3 (local)
+ * Tier routing:
+ *   Primary: Groq LLM intent extraction (after STT) — reliable for natural speech
+ *   Offline fallback: regex rules engine (only when cloud is unreachable)
+ *
+ * The regex/rules layer proved unreliable for natural speech variations.
+ * Groq LLM is now the primary intent extraction path. Rules are kept
+ * as an offline-only fallback for when cloud APIs are unavailable.
+ *
  * Confidence check: below 0.7 -> status = "confirmation_required"
  * OpenRouter fallback: ONLY if Groq direct API is down
  */
@@ -27,6 +34,7 @@ import type {
   TenantId,
   UserId,
   DeviceId,
+  FamilyVoiceContext,
 } from "@clever/shared";
 import { CONFIDENCE_THRESHOLD } from "@clever/shared";
 
@@ -74,6 +82,12 @@ export interface VoicePipelineConfig {
    * Default: 0.7 (from @clever/shared CONFIDENCE_THRESHOLD)
    */
   confidenceThreshold?: number;
+
+  /**
+   * Family voice context — when present, scopes the LLM system prompt
+   * to the family member's personality, permissions, and allowed devices.
+   */
+  familyContext?: FamilyVoiceContext;
 }
 
 export interface PipelineEvents {
@@ -171,51 +185,21 @@ export class VoicePipeline extends EventEmitter<PipelineEvents> {
 
     try {
       // -------------------------------------------------------------------
-      // TIER 1: Try rules engine first (if we can get a quick transcript)
+      // Determine cloud availability
       // -------------------------------------------------------------------
+      // On ESP32-S3 satellites, ESP-SR MultiNet handles common commands
+      // locally before audio ever reaches this pipeline. Commands that
+      // reach here are ones the satellite couldn't handle.
 
-      // Tier 1 rules engine needs a transcript — we'll check rules after STT.
-      // On ESP32-S3 satellites, ESP-SR MultiNet handles common commands locally
-      // before audio ever reaches this pipeline. Commands that reach here are
-      // ones the satellite couldn't handle.
-
-      // -------------------------------------------------------------------
-      // Route to appropriate tier (if Tier 1 didn't match)
-      // -------------------------------------------------------------------
-
-      if (!parsedIntent) {
-        const decision = this.tierRouter.route(transcript, transcript === "");
-
-        if (decision.tier1Intent) {
-          // Tier router found a rules match (transcript was available)
-          parsedIntent = decision.tier1Intent;
-          tier = "tier1_rules";
-        } else {
-          tier = decision.tier;
-        }
-      }
+      const decision = this.tierRouter.route(transcript, transcript === "");
+      tier = decision.tier;
 
       // -------------------------------------------------------------------
-      // TIER 1: Return immediately if rules matched
+      // PRIMARY PATH: Groq LLM intent extraction (cloud)
       // -------------------------------------------------------------------
-
-      if (tier === "tier1_rules" && parsedIntent) {
-        const totalLatency = performance.now() - sessionStartTime;
-
-        return this.buildSession(
-          sessionId,
-          tier,
-          transcript,
-          parsedIntent,
-          `Command recognized: ${parsedIntent.domain} ${parsedIntent.action}`,
-          stages,
-          totalLatency
-        );
-      }
-
-      // -------------------------------------------------------------------
-      // TIER 2: Cloud streaming pipeline
-      // -------------------------------------------------------------------
+      // Groq is the primary intent extraction path. The regex/rules engine
+      // proved unreliable for natural speech variations. Groq handles
+      // intent extraction after STT, then streams to TTS.
 
       if (tier === "tier2_cloud") {
         const result = await this.runTier2Pipeline(
@@ -227,30 +211,13 @@ export class VoicePipeline extends EventEmitter<PipelineEvents> {
         transcript = result.transcript;
         parsedIntent = result.intent;
         responseText = result.responseText;
-
-        // After STT, check Tier 1 rules engine before running LLM
-        if (!parsedIntent && transcript) {
-          const rulesIntent = matchRule(transcript);
-          if (rulesIntent) {
-            parsedIntent = rulesIntent;
-            tier = "tier1_rules";
-            const totalLatency = performance.now() - sessionStartTime;
-            return this.buildSession(
-              sessionId,
-              tier,
-              transcript,
-              parsedIntent,
-              `Command recognized: ${parsedIntent.domain} ${parsedIntent.action}`,
-              stages,
-              totalLatency
-            );
-          }
-        }
       }
 
       // -------------------------------------------------------------------
-      // TIER 3: Local fallback pipeline
+      // OFFLINE FALLBACK: Local pipeline + rules engine
       // -------------------------------------------------------------------
+      // When cloud is unavailable, fall back to local STT + local LLM.
+      // The regex rules engine is used as a last resort for offline mode.
 
       if (tier === "tier3_local") {
         const result = await this.runTier3Pipeline(audio, stages);
@@ -259,7 +226,7 @@ export class VoicePipeline extends EventEmitter<PipelineEvents> {
         parsedIntent = result.intent;
         responseText = result.responseText;
 
-        // Check rules engine on local transcript too
+        // Rules engine as offline-only fallback when local LLM also fails
         if (!parsedIntent && transcript) {
           const rulesIntent = matchRule(transcript);
           if (rulesIntent) {
@@ -416,9 +383,30 @@ export class VoicePipeline extends EventEmitter<PipelineEvents> {
       this.emit("tts_audio", chunk);
     });
 
+    // Build device context, injecting family personality if present
+    let effectiveDeviceContext = this.config.deviceContext;
+    if (this.config.familyContext) {
+      const fc = this.config.familyContext;
+      const familyPreamble =
+        `AGENT IDENTITY: You are ${fc.profile.agent_name}.\n` +
+        `AGE GROUP: ${fc.profile.age_group}\n` +
+        `RESPONSE STYLE: Keep responses under ${fc.profile.agent_personality.max_response_words} words. ` +
+        `Tone: ${fc.profile.agent_personality.tone}. ` +
+        `Vocabulary: ${fc.profile.agent_personality.vocabulary_level}.\n` +
+        (fc.profile.agent_personality.forbidden_topics.length > 0
+          ? `FORBIDDEN TOPICS: ${fc.profile.agent_personality.forbidden_topics.join(", ")}.\n`
+          : "") +
+        (fc.profile.age_group === "toddler"
+          ? "COMPANION MODE: No device control. Be a fun conversational companion (stories, songs, animal sounds).\n"
+          : "") +
+        'EMERGENCY: Always respond to "help", "emergency", "fire", "hurt" regardless of restrictions.\n';
+
+      effectiveDeviceContext = familyPreamble + (effectiveDeviceContext ?? "");
+    }
+
     const fullResponse = await llm.streamCompletion(
       transcript,
-      this.config.deviceContext
+      effectiveDeviceContext,
     );
 
     const llmLatency = performance.now() - llmStart;
@@ -690,6 +678,7 @@ export async function processVoiceCommand(
     localTts?: LocalTTSConfig;
     deviceContext?: string;
     confidenceThreshold?: number;
+    familyContext?: FamilyVoiceContext;
   }
 ): Promise<VoiceSession> {
   const pipeline = new VoicePipeline({
@@ -724,6 +713,7 @@ export async function processVoiceCommand(
     localTts: config.localTts,
     deviceContext: config.deviceContext,
     confidenceThreshold: config.confidenceThreshold,
+    familyContext: config.familyContext,
   });
 
   try {

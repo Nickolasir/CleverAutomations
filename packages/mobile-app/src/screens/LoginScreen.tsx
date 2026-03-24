@@ -11,6 +11,7 @@ import {
   Alert,
   ActivityIndicator,
 } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { supabase } from "../lib/supabase";
 
 /**
@@ -21,6 +22,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -62,7 +64,7 @@ export default function LoginScreen() {
         {/* Logo */}
         <View style={styles.logoContainer}>
           <View style={styles.logoBox}>
-            <Text style={styles.logoText}>CA</Text>
+            <Ionicons name="home" size={28} color="#ffffff" />
           </View>
           <Text style={styles.title}>Clever Automations</Text>
           <Text style={styles.subtitle}>AI-powered smart home management</Text>
@@ -94,10 +96,15 @@ export default function LoginScreen() {
               onChangeText={setPassword}
               placeholder="Enter your password"
               placeholderTextColor="#94a3b8"
-              secureTextEntry
+              secureTextEntry={!showPassword}
               autoComplete="password"
               textContentType="password"
             />
+            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+              <Text style={{ color: "#D4A843", marginTop: 6, fontSize: 13 }}>
+                {showPassword ? "Hide" : "Show"} password
+              </Text>
+            </TouchableOpacity>
           </View>
 
           <TouchableOpacity
@@ -121,7 +128,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#FDF6E3",
   },
   scrollContent: {
     flexGrow: 1,
@@ -137,7 +144,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 16,
-    backgroundColor: "#2563eb",
+    backgroundColor: "#D4A843",
     justifyContent: "center",
     alignItems: "center",
     marginBottom: 16,
@@ -150,7 +157,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 24,
     fontWeight: "700",
-    color: "#0f172a",
+    color: "#1a1a1a",
     marginBottom: 4,
   },
   subtitle: {
@@ -183,17 +190,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 16,
-    color: "#0f172a",
+    color: "#1a1a1a",
     backgroundColor: "#ffffff",
   },
   button: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#D4A843",
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
     marginTop: 8,
-    shadowColor: "#2563eb",
+    shadowColor: "#D4A843",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,

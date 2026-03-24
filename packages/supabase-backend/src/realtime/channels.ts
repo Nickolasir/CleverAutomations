@@ -249,8 +249,8 @@ export function subscribeToDevicePresence(
     channel.on("presence", { event: "join" }, ({ key, currentPresences, newPresences }) => {
       callbacks.onJoin!(
         key,
-        currentPresences as DevicePresenceState[],
-        newPresences as DevicePresenceState[]
+        currentPresences as unknown as DevicePresenceState[],
+        newPresences as unknown as DevicePresenceState[]
       );
     });
   }
@@ -259,8 +259,8 @@ export function subscribeToDevicePresence(
     channel.on("presence", { event: "leave" }, ({ key, currentPresences, leftPresences }) => {
       callbacks.onLeave!(
         key,
-        currentPresences as DevicePresenceState[],
-        leftPresences as DevicePresenceState[]
+        currentPresences as unknown as DevicePresenceState[],
+        leftPresences as unknown as DevicePresenceState[]
       );
     });
   }

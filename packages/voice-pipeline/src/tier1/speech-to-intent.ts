@@ -161,7 +161,7 @@ export class SpeechToIntent extends EventEmitter<SpeechToIntentEvents> {
    * @returns null (use processTranscript instead)
    */
   processAudio(_audio: Int16Array): ParsedIntent | null {
-    this.emit("not_understood", 0);
+    this.emit("not_understood", "audio_input_not_supported");
     return null;
   }
 

@@ -188,7 +188,7 @@ export function estimateDOA(
       const idx = i * DOA_MIC_COUNT + ch;
       const sample = samples[idx];
       if (sample !== undefined) {
-        channelEnergy[ch] += sample * sample;
+        channelEnergy[ch] = (channelEnergy[ch] ?? 0) + sample * sample;
       }
     }
   }

@@ -15,9 +15,12 @@ import type {
   ParsedIntent,
   TenantId,
   UserId,
+  FamilyVoiceContext,
+  PermissionCheckResult,
 } from "@clever/shared";
 import { HARestClient, mapHAState } from "./rest-client.js";
 import type { HAEntityState } from "./rest-client.js";
+import { FamilyPermissionResolver } from "@clever/shared";
 
 // ---------------------------------------------------------------------------
 // Device resolver interface
@@ -68,6 +71,12 @@ export interface ExecutionResult {
   errors: string[];
   /** Time to execute all service calls in ms. */
   durationMs: number;
+  /** Set to true when the command was denied by family permissions. */
+  permissionDenied?: boolean;
+  /** Human-readable denial reason (age-appropriate). */
+  denialMessage?: string;
+  /** Descriptions of constraints that were applied (e.g., "Temperature capped at 78°F"). */
+  constraintMessages?: string[];
 }
 
 // ---------------------------------------------------------------------------
@@ -228,11 +237,13 @@ export class CommandExecutor {
   private readonly haClient: HARestClient;
   private readonly resolver: DeviceResolver;
   private readonly tenantId: TenantId;
+  private readonly permissionResolver: FamilyPermissionResolver;
 
   constructor(config: CommandExecutorConfig) {
     this.haClient = config.haClient;
     this.resolver = config.resolver;
     this.tenantId = config.tenantId;
+    this.permissionResolver = new FamilyPermissionResolver();
   }
 
   // -----------------------------------------------------------------------
@@ -242,18 +253,21 @@ export class CommandExecutor {
   /**
    * Execute a parsed voice intent against Home Assistant.
    *
-   * @param intent  Parsed intent from the voice pipeline.
-   * @param userId  The user who issued the command.
-   * @param source  Origin of the command.
+   * @param intent         Parsed intent from the voice pipeline.
+   * @param userId         The user who issued the command.
+   * @param source         Origin of the command.
+   * @param familyContext  Optional family context for permission checking.
    */
   async execute(
     intent: ParsedIntent,
     userId: UserId,
     source: DeviceCommand["source"] = "voice",
+    familyContext?: FamilyVoiceContext,
   ): Promise<ExecutionResult> {
     const start = Date.now();
     const errors: string[] = [];
     const stateChanges: DeviceStateChange[] = [];
+    const constraintMessages: string[] = [];
 
     // 1. Resolve target device(s)
     const targets = await this.resolveTargets(intent);
@@ -270,7 +284,36 @@ export class CommandExecutor {
       };
     }
 
-    // 2. Find the action handler
+    // 2. Family permission check (before any HA calls)
+    if (familyContext) {
+      for (const target of targets) {
+        const permCheck = this.permissionResolver.checkPermission(
+          familyContext,
+          intent,
+          target,
+        );
+
+        if (!permCheck.allowed) {
+          return {
+            success: false,
+            stateChanges: [],
+            errors: [],
+            durationMs: Date.now() - start,
+            permissionDenied: true,
+            denialMessage: permCheck.reason,
+          };
+        }
+
+        // Apply constraints (clamp parameters in place)
+        const clamped = this.permissionResolver.applyConstraints(
+          intent,
+          permCheck.constraints_applied,
+        );
+        constraintMessages.push(...clamped);
+      }
+    }
+
+    // 3. Find the action handler
     const domainHandlers =
       ACTION_HANDLERS[intent.domain] ??
       ACTION_HANDLERS[this.categoryToDomain(targets[0]?.category)];
@@ -296,7 +339,7 @@ export class CommandExecutor {
       };
     }
 
-    // 3. Execute against each target device
+    // 4. Execute against each target device
     for (const target of targets) {
       try {
         // Capture state before execution
@@ -343,6 +386,7 @@ export class CommandExecutor {
       stateChanges,
       errors,
       durationMs: Date.now() - start,
+      constraintMessages: constraintMessages.length > 0 ? constraintMessages : undefined,
     };
   }
 

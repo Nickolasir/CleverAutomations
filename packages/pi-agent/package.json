@@ -22,6 +22,7 @@
   "dependencies": {
     "@clever/shared": "*",
     "@clever/ha-bridge": "*",
+    "@clever/orchestrator": "*",
     "@supabase/supabase-js": "^2.49.0"
   },
   "devDependencies": {

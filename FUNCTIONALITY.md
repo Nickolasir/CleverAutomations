@@ -14,14 +14,15 @@ CleverAutomations is an AI-powered smart home automation platform built around a
 4. [Home Assistant Integration (HA Bridge)](#4-home-assistant-integration-ha-bridge)
 5. [Database Schema & Multi-Tenancy](#5-database-schema--multi-tenancy)
 6. [Authentication & Authorization](#6-authentication--authorization)
-7. [Web Dashboard (Next.js)](#7-web-dashboard-nextjs)
-8. [Mobile App (React Native)](#8-mobile-app-react-native)
-9. [Guest Lifecycle Management (CleverHost)](#9-guest-lifecycle-management-cleverhost)
-10. [Audit Logging](#10-audit-logging)
-11. [Security Model](#11-security-model)
-12. [Hardware & Deployment](#12-hardware--deployment)
-13. [Codebase Organization](#13-codebase-organization)
-14. [Roadmap](#14-roadmap)
+7. [Family Subagent System](#7-family-subagent-system)
+8. [Web Dashboard (Next.js)](#8-web-dashboard-nextjs)
+9. [Mobile App (React Native)](#9-mobile-app-react-native)
+10. [Guest Lifecycle Management (CleverHost)](#10-guest-lifecycle-management-cleverhost)
+11. [Audit Logging](#11-audit-logging)
+12. [Security Model](#12-security-model)
+13. [Hardware & Deployment](#13-hardware--deployment)
+14. [Codebase Organization](#14-codebase-organization)
+15. [Roadmap](#15-roadmap)
 
 ---
 
@@ -266,7 +267,7 @@ Wraps the Home Assistant REST API:
 
 ### Command Executor (`command-executor.ts`)
 
-Translates parsed voice intents into HA service calls:
+Translates parsed voice intents into HA service calls. When a `FamilyVoiceContext` is provided, the executor runs the `FamilyPermissionResolver` before any HA API call — checking age-based permissions, applying constraint clamping (thermostat range, volume cap), and returning age-appropriate denial messages if blocked.
 
 | Intent | HA Service Call |
 |--------|----------------|
@@ -310,6 +311,16 @@ All tables enforce tenant isolation via Row-Level Security (RLS). Every query is
 | `voice_sessions` | Voice interaction log | tenant_id, user_id, tier, transcript, parsed_intent, response_text, stages (with per-stage latency), total_latency_ms, confidence, status |
 | `audit_logs` | Immutable security audit trail | tenant_id, user_id, action (14 types), details, ip_address, timestamp (server-generated) |
 
+### Family Subagent Tables (Migration 004)
+
+| Table | Purpose | Key Fields |
+|-------|---------|------------|
+| `family_member_profiles` | Links user to age group + named agent | tenant_id, user_id, age_group, agent_name (unique per tenant), agent_voice_id, agent_personality (JSONB), managed_by, expires_at |
+| `family_permission_overrides` | Per-member device/category/room grants/denials | tenant_id, profile_id, device_id, device_category, room, action (control\|view_state\|configure\|view_history), allowed, constraints (JSONB) |
+| `family_schedules` | Time-based restriction windows | tenant_id, profile_id, schedule_name, days_of_week, start_time, end_time, timezone, restrictions (JSONB), is_active |
+| `family_spending_limits` | Purchase/ordering caps per member | tenant_id, profile_id, daily_limit, monthly_limit, requires_approval_above, approved_categories |
+| `parental_notifications` | Events parents should see | tenant_id, profile_id, event_type, details (JSONB), acknowledged |
+
 ### CleverHost Tables
 
 | Table | Purpose | Key Fields |
@@ -339,6 +350,9 @@ All tables enforce tenant isolation via Row-Level Security (RLS). Every query is
     "tenant_id": "tenant-uuid",
     "user_role": "owner|admin|manager|resident|guest",
     "device_scope": "device-id (optional, for scoped device tokens)",
+    "family_age_group": "adult|teenager|tween|child|toddler|adult_visitor (optional)",
+    "family_profile_id": "profile-uuid (optional)",
+    "agent_name": "Jarvis|Luna|Buddy|etc (optional)",
     "iat": 1234567890,
     "exp": 1234571490
   }
@@ -365,14 +379,182 @@ owner > admin > manager > resident > guest
 ### RLS Enforcement
 
 - Every table has `tenant_id` column with RLS policy: `tenant_id = auth.jwt()->>'tenant_id'`
-- Cross-tenant isolation is verified by automated tests (`rls-isolation.test.ts`) on all 11 tables
+- Cross-tenant isolation is verified by automated tests (`rls-isolation.test.ts`) on all 16 tables (11 core + 5 family)
 - Edge Functions never use service role for user-initiated requests (defense-in-depth)
 - Audit logs table: no UPDATE/DELETE allowed for any user role (immutable)
 - Guest users can only read their own guest profile
 
 ---
 
-## 7. Web Dashboard (Next.js)
+## 7. Family Subagent System
+
+### Overview
+
+Each family member gets a **named personal agent** with a unique wake word (e.g., "Hey Jarvis" for Dad, "Hey Luna" for the teen, "Hey Buddy" for a child). The system provides **age-based differential permissions** that layer on top of the existing 5-level role system without replacing it.
+
+The existing `UserRole` (owner/admin/manager/resident/guest) remains the RLS security boundary. The new `FamilyAgeGroup` adds finer-grained application-level permission control resolved at command execution time by the `FamilyPermissionResolver`.
+
+### Age Group Tiers (6 Levels)
+
+| Age Group | Ages | Maps to DB Role | Description |
+|-----------|------|-----------------|-------------|
+| **adult** | 18+ (parents) | owner/admin | Full control of everything |
+| **teenager** | 15-17 | resident | Near-adult but no security/locks/cameras/spending |
+| **tween** | 10-14 | resident | Own-room focused, PG content, no thermostat extremes |
+| **child** | 5-9 | guest | Own-room lights only, G content, educational interactions |
+| **toddler** | 2-4 | guest | Zero device control — agent is a conversational companion |
+| **adult_visitor** | 18+ (guests) | guest | Scoped to explicitly-allowed devices, time-limited |
+
+### Permission Matrix — Device Control
+
+| Capability | Adult | Teenager | Tween | Child | Toddler | Visitor |
+|-----------|:-----:|:--------:|:-----:|:-----:|:-------:|:-------:|
+| Lights — own room | Yes | Yes | Yes | Yes | No | Allowed only |
+| Lights — common areas | Yes | Yes | No | No | No | Allowed only |
+| Locks (front door, garage) | Yes | **No** | No | No | No | No |
+| Thermostat | Full range | 65-78°F | 68-75°F | No | No | 68-76°F |
+| Media player | All | PG-13, vol≤80% | PG, vol≤70% | G, vol≤50% | Playlist only | PG-13, vol≤70% |
+| Cameras/surveillance | Yes | **No** | No | No | No | No |
+| Fans | Yes | Own room | Own room | Own room | No | Allowed only |
+| Sensors (read) | Yes | Yes | Own room | No | No | No |
+| Alarm/security | Yes | **No** | No | No | No | No |
+
+### Permission Matrix — Non-Device
+
+| Capability | Adult | Teenager | Tween | Child | Toddler | Visitor |
+|-----------|:-----:|:--------:|:-----:|:-----:|:-------:|:-------:|
+| Shopping list — add | Yes | Yes | Yes | No | No | No |
+| Shopping list — purchase | Yes | No | No | No | No | No |
+| Scene activation | All | Approved list | Approved list | None | None | None |
+| View voice history | All users | Own only | Own only | None | None | None |
+| View audit logs | Yes | No | No | No | No | No |
+| Override others | Yes | No | No | No | No | No |
+
+### Safety & Rate Limits
+
+| Constraint | Adult | Teenager | Tween | Child | Toddler | Visitor |
+|-----------|:-----:|:--------:|:-----:|:-----:|:-------:|:-------:|
+| Rate limit (cmd/min) | 60 | 30 | 20 | 10 | 5 | 15 |
+| Emergency commands | Always | Always | Always | Always | Always | Always |
+| Time-of-day restrictions | None | Configurable | Configurable | Enforced | Enforced | Configurable |
+
+### Permission Resolution Priority
+
+The `FamilyPermissionResolver` evaluates permissions in this order (highest to lowest):
+
+1. **Emergency bypass** — "help", "fire", "hurt" always pass, all ages
+2. **Explicit per-device override** — parent specifically allowed/denied this device
+3. **Active schedule restriction** — bedtime/school blocks override defaults
+4. **Per-category override** — parent allowed/denied a whole device category
+5. **Per-room override** — parent allowed/denied all devices in a room
+6. **Age-group default matrix** — baseline from the tables above
+
+### Constraint Clamping
+
+When a command is allowed but constrained, parameters are silently adjusted:
+- Teen sets thermostat to 80°F (max 78°F) → clamped to 78°F, agent says "Set to 78, that's your max"
+- Child requests volume at 100% (max 50%) → capped at 50%
+- Tween dims lights to 5% (min 20%) → raised to 20%
+
+### Named Agent System
+
+Each family member picks a unique name for their personal agent. This name becomes their wake word.
+
+| Example Family | Agent Name | Wake Phrase | Personality |
+|---------------|------------|-------------|-------------|
+| Dad (owner) | Jarvis | "Hey Jarvis" | Formal, concise, dry wit |
+| Mom (admin) | Nova | "Hey Nova" | Warm, efficient, informative |
+| Teen (16) | Luna | "Hey Luna" | Friendly, casual |
+| Tween (11) | Sage | "Hey Sage" | Encouraging, educational |
+| Child (7) | Buddy | "Hey Buddy" | Playful, simple words, sound effects, ≤15 words |
+| Toddler (3) | Sunny | "Hey Sunny" | Nurturing, sing-song, ≤10 words, animal sounds |
+| Grandma (visitor) | Clever | "Hey Clever" | Friendly, patient, clear |
+
+### Agent Personality Configuration
+
+Each agent has configurable personality traits stored in `agent_personality` (JSONB):
+- `tone`: formal, friendly, playful, educational, nurturing
+- `vocabulary_level`: adult, teen, child, toddler
+- `humor_level`: 0.0–1.0
+- `encouragement_level`: 0.0–1.0 (higher for younger children)
+- `safety_warnings`: boolean (inject safety reminders)
+- `max_response_words`: shorter for younger users
+- `forbidden_topics`: topics the agent won't discuss (security, cameras, money for children)
+- `sound_effects`: boolean (fun sounds for kids)
+
+### Toddler Companion Mode
+
+Toddlers get zero device control. Their agent is a **conversational companion**:
+- Tells stories, sings nursery rhymes, plays word games
+- "What does a cow say?" → "Mooooo!"
+- Can play parent-approved music playlist on room speaker (the ONLY device interaction)
+- Always responds to "help" / distress keywords → immediate parent notification
+- Keeps responses under 10 words, uses simple vocabulary
+
+### Permission Denial UX
+
+Denials are age-appropriate:
+- **Adult**: "That device isn't in your allowed list."
+- **Teenager**: "You don't have access to the locks. Want me to ask your parents?"
+- **Tween**: "I can't do that one, but I can help with your bedroom lights!"
+- **Child**: "That's a grown-up thing! But hey, want me to tell you a joke?"
+- **Toddler**: "Let's sing a song instead!"
+
+### Schedule System (Parental Time Controls)
+
+Parents define named schedules per child:
+
+| Schedule | Days | Time | Restrictions |
+|----------|------|------|-------------|
+| Bedtime (child) | Sun-Thu | 8:30PM-6:30AM | Block media, all lights except nightlight; auto-activate bedtime scene |
+| School Hours (tween) | Mon-Fri | 8AM-3PM | Block media, gaming switches; allow lights, fan |
+| Quiet Time (teen) | Sun-Thu | 10PM-6AM | Volume cap 30%; no common-area scene changes |
+
+Schedules can auto-activate scenes and generate parental notifications on override attempts.
+
+### Voice Pipeline Integration
+
+```
+ESP32 detects wake word ("Hey Luna") → Pi Agent
+  → WakeWordRegistry.lookup("luna") → load FamilyMemberProfile
+  → WakeWordRegistry.resolveContext("luna") → load overrides, schedules, spending limits
+  → VoicePipeline.processVoiceCommand(audio, { familyContext }) →
+      LLM system prompt scoped to personality + allowed devices + restrictions
+  → CommandExecutor.execute(intent, userId, "voice", familyContext) →
+      FamilyPermissionResolver.checkPermission() → 6-level priority chain
+  → If allowed → apply constraints → HA service call → respond in agent's TTS voice
+  → If denied → age-appropriate denial message → parental notification
+```
+
+The generic "Clever" wake word still works as a fallback.
+
+### Database Tables (Migration 004)
+
+| Table | Purpose |
+|-------|---------|
+| `family_member_profiles` | Links user → age group + agent config (name, voice, personality) |
+| `family_permission_overrides` | Per-member device/category/room grants/denials with constraints |
+| `family_schedules` | Time-based restriction windows (bedtime, school hours, quiet time) |
+| `family_spending_limits` | Purchase/ordering caps per member |
+| `parental_notifications` | Events parents should see (denials, emergencies, override attempts) |
+
+All tables enforce `tenant_id` isolation via RLS. Config tables writable by owner/admin only.
+
+### Edge Cases
+
+| Scenario | Handling |
+|----------|---------|
+| **Babysitter** | Temporary `adult_visitor` profile with custom agent name, explicit device allowances, expiration time |
+| **Grandparent visit** | `adult_visitor` with generous permissions (near-adult minus security/cameras) |
+| **Play date** | Visiting child uses the family child's agent (already scoped appropriately) |
+| **Teen overrides child's bedtime** | Denied — `override_others: false` for teens; only adults can override |
+| **Child speaks from living room** | Permissions follow the USER, not the room; child still limited to own-room devices |
+| **Unknown speaker** | Generic "Clever" handler; low-risk actions allowed; high-risk requires parent confirmation |
+| **Emergency from any age** | Always executes; notifies all adults immediately |
+
+---
+
+## 8. Web Dashboard (Next.js)
 
 ### Authentication Pages
 
@@ -425,6 +607,15 @@ owner > admin > manager > resident > guest
     - Turnover tasks: pending / in_progress / completed
 - "Initiate Wipe" button on completed reservations
 
+#### Family Management (`/dashboard/family`) — Admin only
+- List all family members with agent names, age groups, and active status
+- Add/remove family member profiles with agent name and personality configuration
+- Permission editor: visual matrix of devices × actions with constraint editing
+- Schedule manager: drag-and-drop weekly calendar for bedtime, school hours, quiet time
+- Activity feed: real-time log of family member voice commands with permission denial highlights
+- Notification center: parental alerts for denials, emergencies, and override attempts
+- Spending controls: daily/monthly limits, approved categories, approval queue
+
 #### User Management (`/dashboard/users`) — Admin only
 - List all users in tenant: name, email, role, joined date
 - Invite new user: email, display name, role (constrained by invoker's role)
@@ -476,7 +667,7 @@ owner > admin > manager > resident > guest
 
 ---
 
-## 8. Mobile App (React Native)
+## 9. Mobile App (React Native)
 
 ### Screens
 
@@ -507,7 +698,7 @@ owner > admin > manager > resident > guest
 
 ---
 
-## 9. Guest Lifecycle Management (CleverHost)
+## 10. Guest Lifecycle Management (CleverHost)
 
 ### Full Guest Lifecycle
 
@@ -545,9 +736,9 @@ Reservation Created → Guest Profile Generated → Check-In Automation
 
 ---
 
-## 10. Audit Logging
+## 11. Audit Logging
 
-### Tracked Actions (14 Types)
+### Tracked Actions (19 Types)
 
 | Action | Description |
 |--------|-------------|
@@ -565,6 +756,11 @@ Reservation Created → Guest Profile Generated → Check-In Automation
 | `scene_created` | New scene defined |
 | `settings_changed` | Tenant settings modified |
 | `security_alert` | Security-related event |
+| `family_permission_denied` | Family member command blocked by permission resolver |
+| `family_schedule_triggered` | Schedule restriction activated (bedtime, school hours) |
+| `family_emergency_command` | Emergency command executed by any family member |
+| `family_override_attempt` | Attempt to override another member's restrictions |
+| `family_spending_request` | Spending request from a family member |
 
 ### Properties
 
@@ -576,7 +772,7 @@ Reservation Created → Guest Profile Generated → Check-In Automation
 
 ---
 
-## 11. Security Model
+## 12. Security Model
 
 ### STRIDE Threat Model (24 Identified Threats)
 
@@ -589,7 +785,7 @@ Reservation Created → Guest Profile Generated → Check-In Automation
 | **Denial of Service** | API rate limit bypass, Pi resource exhaustion, voice flooding | Per-user rate limits (60 cmd/min), process limits, wake word filtering, cooldown |
 | **Elevation of Privilege** | Role escalation, guest-to-admin, edge function cross-tenant | Role set by JWT only, ephemeral guest tokens, no service role for user requests |
 
-### Automated Security Tests (6 Test Suites)
+### Automated Security Tests (7 Test Suites)
 
 | Test Suite | What It Verifies |
 |------------|-----------------|
@@ -599,6 +795,7 @@ Reservation Created → Guest Profile Generated → Check-In Automation
 | `guest-wipe.test.ts` | All 6 wipe categories clear properly, incomplete wipe handling |
 | `credential-scan.test.ts` | No hardcoded secrets in codebase, `.env.example` coverage |
 | `security.test.ts` | Voice confidence threshold enforcement, command injection prevention, no raw audio storage |
+| `family-permissions.test.ts` | Age group × device category × action permission matrix, emergency bypass for all ages, schedule enforcement, constraint clamping, RLS isolation on family tables |
 
 ### Network Security
 
@@ -613,7 +810,7 @@ Covers: authentication, authorization, data isolation, API security, device secu
 
 ---
 
-## 12. Hardware & Deployment
+## 13. Hardware & Deployment
 
 ### Central Hub (Per Property)
 
@@ -698,19 +895,21 @@ One per room for distributed sensing and voice capture. Connects to Pi hub over 
 
 ---
 
-## 13. Codebase Organization
+## 14. Codebase Organization
 
 ### Monorepo Structure (npm workspaces + Turborepo)
 
 ```
 CleverAutomations/
 ├── packages/
-│   ├── shared/              # Shared TypeScript types & constants
-│   │   └── src/types/       # tenant, device, voice, guest, audit, api types
+│   ├── shared/              # Shared TypeScript types, constants & permission engine
+│   │   └── src/
+│   │       ├── types/       # tenant, device, voice, guest, audit, api, family types
+│   │       └── permissions/ # FamilyPermissionResolver, default matrices, denial templates
 │   │
 │   ├── voice-pipeline/      # Three-tier voice processing
 │   │   └── src/
-│   │       ├── orchestrator/ # Pipeline entry point, tier router, health checks
+│   │       ├── orchestrator/ # Pipeline entry point, tier router, health checks, wake-word registry
 │   │       ├── tier1/        # Rules engine, Picovoice Rhino
 │   │       ├── tier2/        # Deepgram STT, Groq LLM, Cartesia TTS
 │   │       ├── tier3/        # Faster-Whisper, llama.cpp, Piper TTS
@@ -734,7 +933,7 @@ CleverAutomations/
 │   ├── supabase-backend/    # Cloud backend
 │   │   └── src/
 │   │       ├── schema/      # SQL table definitions, auth schema
-│   │       ├── migrations/  # 5 migration files (init, guest, voice, timescale, RLS)
+│   │       ├── migrations/  # Migration files (init, portal/CRM, kitchen hub, family subagents)
 │   │       ├── rls/         # RLS policy definitions
 │   │       ├── edge-functions/ # device-command, guest-profile-wipe, voice-webhook
 │   │       ├── realtime/    # Channel setup, state broadcasts
@@ -780,7 +979,7 @@ CleverAutomations/
 
 ---
 
-## 14. Roadmap
+## 15. Roadmap
 
 ### Phase 1 (Current)
 
@@ -794,6 +993,8 @@ CleverAutomations/
 - Guest profile wipe for CleverHost
 - Complete audit logging
 - 6 automated security test suites
+- **Family Subagent System**: Named personal agents with age-based permissions (6 age tiers), wake word registry, permission resolver with 6-level priority chain, constraint clamping, schedule system, parental notifications, age-appropriate agent personalities and denial UX
+- Kitchen Sub-Hub: ePantry, shopping lists, receipt scanning, pantry photo analysis
 
 ### Phase 2 (Planned)
 
@@ -802,7 +1003,7 @@ CleverAutomations/
 - **Moshi speech-to-speech** (Kyutai Labs, 160–200ms, CC-BY 4.0) — end-to-end voice without separate TTS, requires cloud GPU
 - **Kyutai Pocket TTS** — 100M param CPU-based local TTS (faster than Piper)
 - **PMS integration** — Guesty/Hospitable for deeper property management
-- **Speaker identification** — Voice biometrics for multi-occupant attribution
+- **Speaker identification** — Voice biometrics for automatic multi-occupant attribution (Phase 1 uses named agent wake words as a manual workaround)
 - **Dynamic pricing advisor** — AI-powered STR pricing suggestions
 - **Direct booking integration** — Reduce Airbnb dependency
 - **Guest loyalty program** — Repeat guest recognition

@@ -20,6 +20,14 @@ const ACTION_LABELS: Record<AuditAction, string> = {
   guest_profile_wiped: "Guest Profile Wiped",
   voice_command_processed: "Voice Command",
   settings_changed: "Settings Changed",
+  pantry_item_added: "Pantry Item Added",
+  pantry_item_removed: "Pantry Item Removed",
+  pantry_item_updated: "Pantry Item Updated",
+  shopping_list_item_added: "Shopping List Item Added",
+  shopping_list_item_removed: "Shopping List Item Removed",
+  shopping_list_item_checked: "Shopping List Item Checked",
+  receipt_scanned: "Receipt Scanned",
+  pantry_photo_analyzed: "Pantry Photo Analyzed",
 };
 
 const PAGE_SIZE = 50;
