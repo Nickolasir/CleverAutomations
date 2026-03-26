@@ -539,7 +539,7 @@ async function seedSpendingLimits(): Promise<void> {
 
 async function main(): Promise<void> {
   console.log("=============================================================");
-  console.log("  Clever Automations - Family Profile Seed Extension");
+  console.log("  CleverHub - Family Profile Seed Extension");
   console.log("=============================================================");
   console.log(`  Target: ${SUPABASE_URL}`);
   console.log(`  Tenant: ${SEED_IDS.tenant}`);

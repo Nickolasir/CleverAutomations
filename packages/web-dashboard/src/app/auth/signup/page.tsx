@@ -85,7 +85,7 @@ export default function SignupPage() {
             Create your account
           </h1>
           <p className="mt-2 text-sm text-slate-500">
-            Sign up to get started with Clever Automations
+            Sign up to get started with CleverHub
           </p>
         </div>
 

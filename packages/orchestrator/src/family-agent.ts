@@ -88,30 +88,42 @@ export class FamilyMemberAgent {
     allowedDevices: DeviceStateInfo[],
     conversationHistory: ConversationMessage[],
     activeScheduleNames: string[],
+    memoryContext?: string,
+    preBuiltHistory?: LLMMessage[],
   ): Promise<{
     responseText: string;
     intent: ParsedIntent | null;
     triageCategory: TriageCategory;
   }> {
     // Build the system prompt scoped to this agent
-    const systemPrompt = buildFamilyAgentSystemPrompt(
+    let systemPrompt = buildFamilyAgentSystemPrompt(
       this.wakeWordEntry,
       allowedDevices,
       activeScheduleNames,
     );
+
+    // Append memory context if provided
+    if (memoryContext) {
+      systemPrompt += "\n\n" + memoryContext;
+    }
 
     // Build message history
     const messages: LLMMessage[] = [
       { role: "system", content: systemPrompt },
     ];
 
-    // Add conversation history (last 20 messages for context)
-    const recentHistory = conversationHistory.slice(-20);
-    for (const msg of recentHistory) {
-      messages.push({
-        role: msg.role === "user" ? "user" : "assistant",
-        content: msg.content,
-      });
+    // Use pre-built history (from context window manager) if provided,
+    // otherwise fall back to simple slicing
+    if (preBuiltHistory) {
+      messages.push(...preBuiltHistory);
+    } else {
+      const recentHistory = conversationHistory.slice(-20);
+      for (const msg of recentHistory) {
+        messages.push({
+          role: msg.role === "user" ? "user" : "assistant",
+          content: msg.content,
+        });
+      }
     }
 
     // Add the current message

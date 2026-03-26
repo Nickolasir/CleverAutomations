@@ -113,7 +113,7 @@ HA_CONFIG_FILE="$HA_DATA_DIR/configuration.yaml"
 if [[ ! -f "$HA_CONFIG_FILE" ]]; then
   log "Creating initial Home Assistant configuration..."
   cat > "$HA_CONFIG_FILE" <<'HACONFIG'
-# Clever Automations — Home Assistant Configuration
+# CleverHub — Home Assistant Configuration
 # This instance is used as the device control layer only.
 # Voice is handled by our custom pipeline, NOT HA Assist.
 
@@ -179,7 +179,7 @@ else
   # Ensure API components are enabled
   if ! grep -q '^api:' "$HA_CONFIG_FILE"; then
     warn "Adding 'api:' to existing configuration..."
-    echo -e "\n# Added by Clever Automations installer\napi:" >> "$HA_CONFIG_FILE"
+    echo -e "\n# Added by CleverHub installer\napi:" >> "$HA_CONFIG_FILE"
   fi
 
   if ! grep -q '^websocket_api:' "$HA_CONFIG_FILE"; then

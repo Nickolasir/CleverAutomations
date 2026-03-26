@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Conversations Edge Function
+ * CleverHub - Conversations Edge Function
  *
  * CRUD endpoints for managing conversation history.
  *

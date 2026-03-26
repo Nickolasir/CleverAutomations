@@ -13,6 +13,8 @@ import type {
   MessageRole,
   RequestSource,
 } from "./types.js";
+import type { ConversationSummary } from "./memory/types.js";
+import { estimateTokens } from "./memory/token-counter.js";
 
 // ---------------------------------------------------------------------------
 // Supabase client interface (injected, not imported)
@@ -263,6 +265,79 @@ export class ConversationManager {
       },
     );
     return (data ?? []).reverse();
+  }
+
+  // -----------------------------------------------------------------------
+  // Conversation summaries
+  // -----------------------------------------------------------------------
+
+  /**
+   * Load the most recent summary for a conversation.
+   */
+  async loadLatestSummary(
+    conversationId: string,
+  ): Promise<ConversationSummary | null> {
+    const { data } = await this.query<ConversationSummary[]>(
+      "conversation_summaries",
+      (q) =>
+        q
+          .select("*")
+          .eq("conversation_id", conversationId)
+          .order("created_at", { ascending: false })
+          .limit(1),
+    );
+    return data && data.length > 0 ? data[0] ?? null : null;
+  }
+
+  /**
+   * Save a conversation summary (cache for context window manager).
+   */
+  async saveSummary(
+    conversationId: string,
+    tenantId: TenantId,
+    summaryText: string,
+    summarizedMessages: ConversationMessage[],
+    summaryTokens: number,
+  ): Promise<ConversationSummary> {
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const firstMsg = summarizedMessages[0];
+    const lastMsg = summarizedMessages[summarizedMessages.length - 1];
+
+    const originalTokens = summarizedMessages.reduce(
+      (sum, m) => sum + estimateTokens(m.content),
+      0,
+    );
+
+    const summary: ConversationSummary = {
+      id,
+      conversation_id: conversationId,
+      tenant_id: tenantId,
+      summary_text: summaryText,
+      first_message_id: firstMsg?.id ?? "",
+      last_message_id: lastMsg?.id ?? "",
+      message_count: summarizedMessages.length,
+      original_tokens: originalTokens,
+      summary_tokens: summaryTokens,
+      created_at: now,
+    };
+
+    await this.query("conversation_summaries", (q) =>
+      q.insert({
+        id: summary.id,
+        conversation_id: summary.conversation_id,
+        tenant_id: summary.tenant_id,
+        summary_text: summary.summary_text,
+        first_message_id: summary.first_message_id,
+        last_message_id: summary.last_message_id,
+        message_count: summary.message_count,
+        original_tokens: summary.original_tokens,
+        summary_tokens: summary.summary_tokens,
+      }),
+    );
+
+    return summary;
   }
 
   // -----------------------------------------------------------------------

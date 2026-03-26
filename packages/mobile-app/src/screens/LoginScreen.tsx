@@ -66,7 +66,7 @@ export default function LoginScreen() {
           <View style={styles.logoBox}>
             <Ionicons name="home" size={28} color="#ffffff" />
           </View>
-          <Text style={styles.title}>Clever Automations</Text>
+          <Text style={styles.title}>CleverHub</Text>
           <Text style={styles.subtitle}>AI-powered smart home management</Text>
         </View>
 

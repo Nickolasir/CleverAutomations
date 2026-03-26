@@ -76,6 +76,7 @@ const DEFAULT_INCLUDE_DOMAINS: string[] = [
   "cover",
   "media_player",
   "fan",
+  "calendar",
 ];
 
 // ---------------------------------------------------------------------------

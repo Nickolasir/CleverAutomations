@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Device Command Edge Function
+ * CleverHub - Device Command Edge Function
  *
  * Receives device command requests, validates JWT + rate limiting,
  * enforces confidence threshold for voice-sourced commands,
@@ -24,6 +24,45 @@ import type {
   DeviceCategory,
   ApiResult,
 } from "@clever/shared";
+
+// ---------------------------------------------------------------------------
+// Input sanitization (inline for Deno edge function — mirrors @clever/shared)
+// ---------------------------------------------------------------------------
+
+function sanitizeAction(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input.slice(0, 64).replace(/[^a-zA-Z0-9_]/g, "").toLowerCase();
+}
+
+function sanitizeParams(params: unknown): Record<string, unknown> {
+  if (!params || typeof params !== "object" || Array.isArray(params)) return {};
+  const result: Record<string, unknown> = {};
+  const entries = Object.entries(params as Record<string, unknown>);
+  for (const [key, value] of entries.slice(0, 30)) {
+    const safeKey = key.slice(0, 64).replace(/[^a-zA-Z0-9_]/g, "");
+    if (!safeKey) continue;
+    if (typeof value === "string") {
+      result[safeKey] = value.slice(0, 4096).replace(/\0/g, "").replace(/[\x01-\x08\x0B\x0C\x0E-\x1F]/g, "").trim();
+    } else if (typeof value === "number") {
+      result[safeKey] = Number.isFinite(value) ? value : 0;
+    } else if (typeof value === "boolean") {
+      result[safeKey] = value;
+    } else if (Array.isArray(value)) {
+      result[safeKey] = value.slice(0, 10).filter(
+        (v: unknown) => typeof v === "number" || typeof v === "string" || typeof v === "boolean"
+      );
+    }
+  }
+  return result;
+}
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function validateUUID(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const trimmed = input.trim().slice(0, 40);
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -120,10 +159,27 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // -----------------------------------------------------------------------
     // 2. Parse and validate request
     // -----------------------------------------------------------------------
-    const payload: DeviceCommandRequest = await req.json();
-    const validationError = validatePayload(payload);
+    const rawPayload: DeviceCommandRequest = await req.json();
+    const validationError = validatePayload(rawPayload);
     if (validationError) {
       return jsonError("VALIDATION_ERROR", validationError, 400);
+    }
+
+    // Sanitize all external inputs
+    const deviceId = validateUUID(rawPayload.device_id);
+    if (!deviceId) {
+      return jsonError("VALIDATION_ERROR", "device_id must be a valid UUID", 400);
+    }
+    const payload: DeviceCommandRequest = {
+      ...rawPayload,
+      device_id: deviceId,
+      action: sanitizeAction(rawPayload.action),
+      parameters: sanitizeParams(rawPayload.parameters),
+      voice_session_id: rawPayload.voice_session_id ? (validateUUID(rawPayload.voice_session_id) ?? undefined) : undefined,
+    };
+
+    if (!payload.action) {
+      return jsonError("VALIDATION_ERROR", "action contains invalid characters", 400);
     }
 
     // -----------------------------------------------------------------------

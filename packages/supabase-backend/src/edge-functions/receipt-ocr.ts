@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Receipt OCR Edge Function
+ * CleverHub - Receipt OCR Edge Function
  *
  * Receives a receipt image URL, sends it to a vision LLM for OCR,
  * extracts line items, and bulk-inserts them into the pantry.

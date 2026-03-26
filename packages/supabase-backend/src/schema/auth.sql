@@ -1,5 +1,5 @@
 -- =============================================================================
--- Clever Automations - Auth Setup
+-- CleverHub - Auth Setup
 -- =============================================================================
 -- Custom JWT claims hook, user creation with tenant assignment,
 -- and device-scoped token validation.

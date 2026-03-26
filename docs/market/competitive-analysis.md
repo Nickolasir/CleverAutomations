@@ -1,15 +1,15 @@
 # Competitive Analysis — Smart Home Platforms
 
-**Clever Automations**
+**CleverHub**
 **Last Updated: 2026-02-12**
 
 ---
 
 ## Executive Summary
 
-The smart home control platform market is segmented into luxury/custom install (Crestron, Savant, Control4), premium residential (Josh.ai, Brilliant), and mass market (Amazon Echo, Google Home, Apple HomeKit). Clever Automations occupies a unique position: **enterprise-grade multi-tenant smart home infrastructure at mass-market cost**, targeting three B2B verticals (builders, STR hosts, apartments) rather than competing in the direct-to-consumer market.
+The smart home control platform market is segmented into luxury/custom install (Crestron, Savant, Control4), premium residential (Josh.ai, Brilliant), and mass market (Amazon Echo, Google Home, Apple HomeKit). CleverHub occupies a unique position: **enterprise-grade multi-tenant smart home infrastructure at mass-market cost**, targeting three B2B verticals (builders, STR hosts, apartments) rather than competing in the direct-to-consumer market.
 
-This analysis evaluates five key competitors and positions Clever Automations' differentiation.
+This analysis evaluates five key competitors and positions CleverHub' differentiation.
 
 ---
 
@@ -134,7 +134,7 @@ This analysis evaluates five key competitors and positions Clever Automations' d
 
 ## Comprehensive Comparison Matrix
 
-| Feature | Brilliant | Josh.ai | Control4 | Savant | Crestron | **Clever Automations** |
+| Feature | Brilliant | Josh.ai | Control4 | Savant | Crestron | **CleverHub** |
 |---------|-----------|---------|----------|--------|----------|----------------------|
 | **Hardware Cost (per home)** | $1,500–3,000 | $2,000–10,000 | $10,000–100,000 | $15,000–500,000 | $20,000–1,000,000 | **$150–400** |
 | **Monthly SaaS** | $0 | ~$50–80/mo | $8.33/mo ($100/yr) | Varies | Varies | **$5–15/mo** |
@@ -200,7 +200,7 @@ There is a massive gap in the market between:
 - **Consumer DIY** (Ring, Nest, Echo) — cheap but fragmented, no unified control, no B2B support
 - **Professional install** (Control4, Savant, Crestron) — unified but expensive, requires integrator
 
-Clever Automations delivers **professional-grade unified control at consumer-grade pricing**, purpose-built for B2B verticals that neither consumer DIY nor professional platforms serve well.
+CleverHub delivers **professional-grade unified control at consumer-grade pricing**, purpose-built for B2B verticals that neither consumer DIY nor professional platforms serve well.
 
 ---
 

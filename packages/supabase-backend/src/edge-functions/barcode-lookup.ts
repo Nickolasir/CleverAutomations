@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Barcode Lookup Edge Function
+ * CleverHub - Barcode Lookup Edge Function
  *
  * Looks up a product barcode via Open Food Facts API and adds or
  * removes it from the tenant's pantry.
@@ -196,7 +196,7 @@ async function lookupBarcode(
       `https://world.openfoodfacts.org/api/v2/product/${encodeURIComponent(barcode)}.json`,
       {
         headers: {
-          "User-Agent": "CleverAutomations/0.1.0 (contact@cleverautomations.com)",
+          "User-Agent": "CleverHub/0.1.0 (contact@cleverhub.space)",
         },
       },
     );

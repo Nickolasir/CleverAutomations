@@ -1,6 +1,6 @@
 # CleverHost Feature Matrix — PMS API Capabilities
 
-**Clever Automations — CleverHost Vertical**
+**CleverHub — CleverHost Vertical**
 **Last Updated: 2026-02-12**
 
 ---

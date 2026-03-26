@@ -1,8 +1,8 @@
-# CleverAutomations — Complete Functionality Reference
+# CleverHub — Complete Functionality Reference
 
 ## Executive Summary
 
-CleverAutomations is an AI-powered smart home automation platform built around a Raspberry Pi 5 local hub with Home Assistant integration and a three-tier voice pipeline. It serves three market verticals — **CleverHome** (homebuilders), **CleverHost** (Airbnb/STR hosts), and **CleverBuilding** (apartment complexes) — through a multi-tenant SaaS backend on Supabase, a Next.js web dashboard, and a React Native mobile app.
+CleverHub is an AI-powered smart home automation platform built around a Raspberry Pi 5 local hub with Home Assistant integration and a three-tier voice pipeline. It serves three market verticals — **CleverHome** (homebuilders), **CleverHost** (Airbnb/STR hosts), and **CleverBuilding** (apartment complexes) — through a multi-tenant SaaS backend on Supabase, a Next.js web dashboard, and a React Native mobile app.
 
 ---
 
@@ -110,7 +110,7 @@ CleverAutomations is an AI-powered smart home automation platform built around a
 - OpenRouter is only used as a fallback LLM if Groq is down
 - Every database table is RLS-protected with tenant isolation via JWT claims
 - The Pi Agent orchestrates all local processing and bridges cloud ↔ local
-- ESP32-S3 satellite nodes (~$8 each) distribute microphones, sensors, and BLE presence to every room — the Pi remains the brain, satellites are the nervous system
+- ESP32-S3 satellite nodes distribute microphones, sensors, and BLE presence to every room — the Pi remains the brain, satellites are the nervous system
 
 ---
 
@@ -825,7 +825,7 @@ Covers: authentication, authorization, data isolation, API security, device secu
 | **Active cooling heatsink + fan** | Sustained inference thermal management |
 | **12V power supply** | Powers entire stack |
 
-### ESP32-S3 Room Satellite Nodes (~$8 each)
+### ESP32-S3 Room Satellite Nodes
 
 One per room for distributed sensing and voice capture. Connects to Pi hub over WiFi.
 
@@ -900,7 +900,7 @@ One per room for distributed sensing and voice capture. Connects to Pi hub over 
 ### Monorepo Structure (npm workspaces + Turborepo)
 
 ```
-CleverAutomations/
+CleverHub/
 ├── packages/
 │   ├── shared/              # Shared TypeScript types, constants & permission engine
 │   │   └── src/
@@ -998,7 +998,7 @@ CleverAutomations/
 
 ### Phase 2 (Planned)
 
-- **ESP32-S3 Room Satellite Nodes** — Distributed wake word (microWakeWord), on-device command recognition (ESP-SR MultiNet, up to 200 commands), mic streaming, BLE presence, and GPIO sensors at ~$8/room. ESPHome configs for zero-code HA integration. Custom ESP-IDF components for MultiNet and audio streaming. Pi Agent audio ingestion interface for multi-room voice. Whole-home coverage for ~$40–64 additional BOM. $0 licensing cost (all open-source/free).
+- **ESP32-S3 Room Satellite Nodes** — Distributed wake word (microWakeWord), on-device command recognition (ESP-SR MultiNet, up to 200 commands), mic streaming, BLE presence, and GPIO sensors. ESPHome configs for zero-code HA integration. Custom ESP-IDF components for MultiNet and audio streaming. Pi Agent audio ingestion interface for multi-room voice. $0 licensing cost (all open-source/free).
 - **TensorFlow Lite Micro on ESP32-S3** — Edge AI for doorbell face detection, gesture recognition, sensor anomaly detection
 - **Moshi speech-to-speech** (Kyutai Labs, 160–200ms, CC-BY 4.0) — end-to-end voice without separate TTS, requires cloud GPU
 - **Kyutai Pocket TTS** — 100M param CPU-based local TTS (faster than Piper)

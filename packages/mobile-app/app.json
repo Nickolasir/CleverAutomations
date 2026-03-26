@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Clever Automations",
+    "name": "CleverHub",
     "slug": "clever-automations",
     "version": "0.1.0",
     "orientation": "portrait",
@@ -18,7 +18,7 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.cleverautomations.app",
       "infoPlist": {
-        "NSMicrophoneUsageDescription": "Clever Automations uses the microphone for voice commands to control your smart home devices."
+        "NSMicrophoneUsageDescription": "CleverHub uses the microphone for voice commands to control your smart home devices."
       }
     },
     "android": {

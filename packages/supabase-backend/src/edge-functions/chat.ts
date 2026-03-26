@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Chat Edge Function
+ * CleverHub - Chat Edge Function
  *
  * Main entry point for the mobile app to communicate with the Clever
  * orchestrator and family member agents. Receives user messages,
@@ -15,6 +15,26 @@
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import type { TenantId, UserId, ApiResult } from "@clever/shared";
+
+// ---------------------------------------------------------------------------
+// Input sanitization (inline for Deno edge function — mirrors @clever/shared)
+// ---------------------------------------------------------------------------
+
+const MAX_MESSAGE_LENGTH = 4096;
+
+function sanitizeText(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input
+    .slice(0, MAX_MESSAGE_LENGTH)
+    .replace(/\0/g, "")
+    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F]/g, "")
+    .trim();
+}
+
+function sanitizeAgentName(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input.slice(0, 64).replace(/[^a-zA-Z0-9_ \-]/g, "").trim().toLowerCase();
+}
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -119,19 +139,35 @@ Deno.serve(async (req: Request): Promise<Response> => {
     // -----------------------------------------------------------------------
     // 2. Parse and validate request
     // -----------------------------------------------------------------------
-    const payload: ChatRequest = await req.json();
+    const rawPayload: ChatRequest = await req.json();
 
-    if (!payload.message || typeof payload.message !== "string") {
+    if (!rawPayload.message || typeof rawPayload.message !== "string") {
       return jsonError("VALIDATION_ERROR", "message is required and must be a string", 400);
     }
 
-    if (!payload.agent_name || typeof payload.agent_name !== "string") {
+    if (!rawPayload.agent_name || typeof rawPayload.agent_name !== "string") {
       return jsonError("VALIDATION_ERROR", "agent_name is required", 400);
     }
 
     const validSources = ["chat", "voice", "quick_command"];
-    if (!validSources.includes(payload.source)) {
+    if (!validSources.includes(rawPayload.source)) {
       return jsonError("VALIDATION_ERROR", `source must be one of: ${validSources.join(", ")}`, 400);
+    }
+
+    // Sanitize all external inputs
+    const payload: ChatRequest = {
+      ...rawPayload,
+      message: sanitizeText(rawPayload.message),
+      agent_name: sanitizeAgentName(rawPayload.agent_name),
+      source: rawPayload.source,
+    };
+
+    if (!payload.message) {
+      return jsonError("VALIDATION_ERROR", "message cannot be empty after sanitization", 400);
+    }
+
+    if (!payload.agent_name) {
+      return jsonError("VALIDATION_ERROR", "agent_name is invalid", 400);
     }
 
     // -----------------------------------------------------------------------

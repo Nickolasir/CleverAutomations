@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Pantry Photo Analysis Edge Function
+ * CleverHub - Pantry Photo Analysis Edge Function
  *
  * Receives a photo of a pantry/fridge/freezer, sends it to a vision LLM
  * to identify food items, and returns the results for user confirmation.

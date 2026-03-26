@@ -17,10 +17,11 @@ import type {
   UserId,
   FamilyVoiceContext,
   PermissionCheckResult,
+  HACalendarEventCreate,
 } from "@clever/shared";
 import { HARestClient, mapHAState } from "./rest-client.js";
 import type { HAEntityState } from "./rest-client.js";
-import { FamilyPermissionResolver } from "@clever/shared";
+import { FamilyPermissionResolver, EMAIL_SEND_ENABLED } from "@clever/shared";
 
 // ---------------------------------------------------------------------------
 // Device resolver interface
@@ -226,6 +227,46 @@ const ACTION_HANDLERS: Record<string, Record<string, ActionHandler>> = {
       c.callService("scene", "turn_on", { entity_id: eid }),
     turn_on: (c, eid) =>
       c.callService("scene", "turn_on", { entity_id: eid }),
+  },
+
+  calendar: {
+    create_event: async (c, eid, p) => {
+      const event: HACalendarEventCreate = {
+        entity_id: eid,
+        summary: String(p["summary"] ?? p["title"] ?? "New Event"),
+        ...(p["start_date_time"] ? { start_date_time: String(p["start_date_time"]) } : {}),
+        ...(p["end_date_time"] ? { end_date_time: String(p["end_date_time"]) } : {}),
+        ...(p["start_date"] ? { start_date: String(p["start_date"]) } : {}),
+        ...(p["end_date"] ? { end_date: String(p["end_date"]) } : {}),
+        ...(p["description"] ? { description: String(p["description"]) } : {}),
+        ...(p["location"] ? { location: String(p["location"]) } : {}),
+      };
+      await c.createCalendarEvent(event);
+      // Return current state after event creation
+      const state = await c.getState(eid);
+      return [state];
+    },
+  },
+
+  // Email send actions — hard-gated by EMAIL_SEND_ENABLED feature flag
+  email: {
+    send: async (c, eid, p) => {
+      if (!EMAIL_SEND_ENABLED) {
+        throw new Error(
+          "Email sending is disabled. Change EMAIL_SEND_ENABLED in feature-flags.ts to enable.",
+        );
+      }
+      const to = String(p["to"] ?? p["target"] ?? "");
+      const subject = String(p["subject"] ?? p["title"] ?? "");
+      const body = String(p["body"] ?? p["message"] ?? "");
+      // Determine provider from entity_id pattern
+      if (eid.includes("outlook") || eid.includes("o365")) {
+        await c.sendOutlookEmail(eid, to, subject, body);
+      } else {
+        await c.sendGmailEmail(eid, to, subject, body);
+      }
+      return [];
+    },
   },
 };
 

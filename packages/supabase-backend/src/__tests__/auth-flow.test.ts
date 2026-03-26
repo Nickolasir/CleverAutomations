@@ -1,7 +1,7 @@
 /**
  * Auth Security Tests
  *
- * Verifies JWT-based authentication flows for the Clever Automations platform.
+ * Verifies JWT-based authentication flows for the CleverHub platform.
  *
  * Security requirements from claude.md:
  *   "Every API endpoint requires JWT authentication. No public endpoints except health check."

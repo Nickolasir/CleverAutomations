@@ -1,6 +1,6 @@
 # Harris County Builder Prospect List
 
-**Clever Automations — CleverHome Vertical**
+**CleverHub — CleverHome Vertical**
 **Market: Harris County / Greater Houston, TX**
 **Last Updated: 2026-02-12**
 

@@ -35,6 +35,7 @@ import ScenesScreen from "./src/screens/ScenesScreen";
 import VoiceLogScreen from "./src/screens/VoiceLogScreen";
 import GuestScreen from "./src/screens/GuestScreen";
 import PantryScreen from "./src/screens/PantryScreen";
+import NutritionScreen from "./src/screens/NutritionScreen";
 import ShoppingListScreen from "./src/screens/ShoppingListScreen";
 import AuditScreen from "./src/screens/AuditScreen";
 import UsersScreen from "./src/screens/UsersScreen";
@@ -77,6 +78,7 @@ export type MoreStackParamList = {
   Audit: undefined;
   Guests: undefined;
   Pantry: undefined;
+  Nutrition: undefined;
   ShoppingList: undefined;
   Users: undefined;
   Settings: undefined;
@@ -116,6 +118,7 @@ const MORE_NAV_ITEMS: MoreNavItem[] = [
   { name: "Family", label: "Family", icon: "people-outline", verticals: ["clever_home"], minRole: "admin" },
   { name: "Guests", label: "Guests", icon: "people-outline", verticals: ["clever_host"] },
   { name: "Pantry", label: "ePantry", icon: "cube-outline" },
+  { name: "Nutrition", label: "Nutrition", icon: "restaurant-outline", minRole: "resident" },
   { name: "ShoppingList", label: "Shopping List", icon: "cart-outline" },
   { name: "Audit", label: "Audit Log", icon: "shield-checkmark-outline", minRole: "admin" },
   { name: "Users", label: "Users", icon: "shield-outline", minRole: "admin", verticals: ["clever_host", "clever_building"] },
@@ -228,6 +231,7 @@ function MoreStackNavigator() {
       <MoreStack.Screen name="Audit" component={AuditScreen} options={{ title: "Audit Log" }} />
       <MoreStack.Screen name="Guests" component={GuestScreen} options={{ title: "Guests" }} />
       <MoreStack.Screen name="Pantry" component={PantryScreen} options={{ title: "ePantry" }} />
+      <MoreStack.Screen name="Nutrition" component={NutritionScreen} options={{ title: "Nutrition" }} />
       <MoreStack.Screen name="ShoppingList" component={ShoppingListScreen} options={{ title: "Shopping List" }} />
       <MoreStack.Screen name="Users" component={UsersScreen} options={{ title: "Users" }} />
       <MoreStack.Screen name="Settings" component={SettingsScreen} options={{ title: "Settings" }} />
@@ -403,7 +407,7 @@ export default function App() {
             <Ionicons name="home" size={32} color="#ffffff" />
           </View>
           <ActivityIndicator size="large" color="#D4A843" style={{ marginTop: 24 }} />
-          <Text style={styles.loadingText}>Loading Clever Automations...</Text>
+          <Text style={styles.loadingText}>Loading CleverHub...</Text>
           <StatusBar style="auto" />
         </View>
       </SafeAreaProvider>

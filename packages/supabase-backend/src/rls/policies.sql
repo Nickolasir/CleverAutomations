@@ -1,5 +1,5 @@
 -- =============================================================================
--- Clever Automations - Row-Level Security Policies
+-- CleverHub - Row-Level Security Policies
 -- =============================================================================
 -- Every table has RLS enabled. Tenant isolation is the foundation: all queries
 -- are filtered by auth.jwt()->>'tenant_id'. Role hierarchy governs CRUD scope.

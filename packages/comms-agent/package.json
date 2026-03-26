@@ -1,0 +1,22 @@
+{
+  "name": "@clever/comms-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "eslint src/",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@clever/shared": "*",
+    "@supabase/supabase-js": "^2.49.0",
+    "googleapis": "^144.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  }
+}

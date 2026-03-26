@@ -1,5 +1,5 @@
 /**
- * Clever Automations — CleverAide Alerts Edge Function
+ * CleverHub — CleverAide Alerts Edge Function
  *
  * Alert creation, acknowledgment, and escalation for caregiver notifications.
  *

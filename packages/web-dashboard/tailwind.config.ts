@@ -12,7 +12,7 @@ const config: Config = {
       colors: {
         /** White-label theming via CSS custom properties.
          *  Tenants override these in their settings; the defaults
-         *  provide the Clever Automations brand palette. */
+         *  provide the CleverHub brand palette. */
         brand: {
           50: "var(--color-brand-50, #FFF8E1)",
           100: "var(--color-brand-100, #FFECB3)",
@@ -36,6 +36,17 @@ const config: Config = {
           text: "var(--color-sidebar-text, #E8E0D0)",
           hover: "var(--color-sidebar-hover, #2D2D2D)",
           active: "var(--color-sidebar-active, #3D3D3D)",
+        },
+        tv: {
+          bg: "#1a1a1a",
+          surface: "#2D2D2D",
+          "surface-hover": "#3D3D3D",
+          text: "#FDF6E3",
+          muted: "#A8A29E",
+          focus: "#D4A843",
+          success: "#22c55e",
+          error: "#dc2626",
+          warning: "#B45309",
         },
       },
       fontFamily: {

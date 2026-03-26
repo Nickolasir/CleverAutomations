@@ -1,5 +1,5 @@
 -- =============================================================================
--- Clever Automations - Complete PostgreSQL Schema
+-- CleverHub - Complete PostgreSQL Schema
 -- =============================================================================
 -- Security-first multi-tenant schema. Every table has tenant_id for RLS.
 -- TimescaleDB for sensor telemetry, pgcrypto for encryption, uuid-ossp for PKs.

@@ -319,7 +319,7 @@ function runTier2Check(): void {
 
 async function main(): Promise<void> {
   console.log("");
-  console.log("  Clever Automations - Voice Pipeline E2E Test");
+  console.log("  CleverHub - Voice Pipeline E2E Test");
   console.log("  ============================================");
   console.log("");
 

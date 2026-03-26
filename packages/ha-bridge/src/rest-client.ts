@@ -12,7 +12,10 @@ import type {
   DeviceCategory,
   DeviceState,
   TenantId,
+  HACalendarEvent,
+  HACalendarEventCreate,
 } from "@clever/shared";
+import { EMAIL_SEND_ENABLED } from "@clever/shared";
 
 // ---------------------------------------------------------------------------
 // HA REST data shapes
@@ -104,8 +107,20 @@ export function entityIdToCategory(entityId: string): DeviceCategory | null {
     cover: "cover",
     media_player: "media_player",
     fan: "fan",
+    calendar: "calendar",
     // HA uses "climate" for thermostats; callers may also query "thermostat"
   };
+
+  // IMAP / Outlook inbox sensors have specific naming patterns
+  const suffix = entityId.split(".")[1] ?? "";
+  if (
+    domain === "sensor" &&
+    (suffix.startsWith("imap_") ||
+      suffix.startsWith("gmail_inbox") ||
+      suffix.startsWith("outlook_inbox"))
+  ) {
+    return "email_sensor";
+  }
 
   return map[domain] ?? null;
 }
@@ -501,6 +516,111 @@ export class HARestClient {
       entity_id: entityId,
       message,
       ...(engine ? { engine } : {}),
+    });
+  }
+
+  /**
+   * Open a URL in a Samsung Smart TV's built-in browser.
+   * Uses the media_player.play_media service with content_type "url".
+   * Works on Samsung TVs integrated via the samsungtv component.
+   */
+  async openTVBrowser(
+    entityId: string,
+    url: string,
+  ): Promise<HAEntityState[]> {
+    return this.callService("media_player", "play_media", {
+      entity_id: entityId,
+      media_content_type: "url",
+      media_content_id: url,
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Calendar service wrappers (HA Calendar API)
+  // -----------------------------------------------------------------------
+
+  /**
+   * GET /api/calendars/{entity_id}?start={iso}&end={iso}
+   * Returns events within the given time range for a calendar entity.
+   */
+  async getCalendarEvents(
+    entityId: string,
+    start: string,
+    end: string,
+  ): Promise<HACalendarEvent[]> {
+    const params = new URLSearchParams({ start, end });
+    return this.request<HACalendarEvent[]>(
+      "GET",
+      `/api/calendars/${entityId}?${params.toString()}`,
+    );
+  }
+
+  /**
+   * POST /api/services/calendar/create_event
+   * Creates a new event on the specified calendar.
+   */
+  async createCalendarEvent(event: HACalendarEventCreate): Promise<void> {
+    await this.callService("calendar", "create_event", {
+      entity_id: event.entity_id,
+      summary: event.summary,
+      ...(event.start_date_time ? { start_date_time: event.start_date_time } : {}),
+      ...(event.end_date_time ? { end_date_time: event.end_date_time } : {}),
+      ...(event.start_date ? { start_date: event.start_date } : {}),
+      ...(event.end_date ? { end_date: event.end_date } : {}),
+      ...(event.description ? { description: event.description } : {}),
+      ...(event.location ? { location: event.location } : {}),
+    });
+  }
+
+  // -----------------------------------------------------------------------
+  // Email service wrappers (GATED BY EMAIL_SEND_ENABLED)
+  // -----------------------------------------------------------------------
+
+  /**
+   * Send an email via the Microsoft 365 (o365) HA integration.
+   * HARD-GATED: throws immediately if EMAIL_SEND_ENABLED is false.
+   */
+  async sendOutlookEmail(
+    account: string,
+    to: string,
+    subject: string,
+    body: string,
+  ): Promise<void> {
+    if (!EMAIL_SEND_ENABLED) {
+      throw new Error(
+        "Email sending is disabled. Change EMAIL_SEND_ENABLED in feature-flags.ts, rebuild, and redeploy to enable.",
+      );
+    }
+    await this.callService("o365", "send_email", {
+      entity_id: account,
+      subject,
+      body,
+      target: to,
+    });
+  }
+
+  /**
+   * Send an email via the SMTP notify platform (Gmail).
+   * HARD-GATED: throws immediately if EMAIL_SEND_ENABLED is false.
+   */
+  async sendGmailEmail(
+    notifyService: string,
+    to: string,
+    subject: string,
+    body: string,
+  ): Promise<void> {
+    if (!EMAIL_SEND_ENABLED) {
+      throw new Error(
+        "Email sending is disabled. Change EMAIL_SEND_ENABLED in feature-flags.ts, rebuild, and redeploy to enable.",
+      );
+    }
+    // notify services use POST /api/services/notify/{service_name}
+    const serviceName = notifyService.replace("notify.", "");
+    await this.callService("notify", serviceName, {
+      entity_id: notifyService,
+      message: body,
+      title: subject,
+      target: to,
     });
   }
 

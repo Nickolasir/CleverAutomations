@@ -202,7 +202,7 @@ const HA_CONFIG: HAConfig = {
     volume: "gal",
     wind_speed: "mph",
   },
-  location_name: "CleverAutomations Demo",
+  location_name: "CleverHub Demo",
   time_zone: "America/Chicago",
   version: "2024.12.0",
   components: [

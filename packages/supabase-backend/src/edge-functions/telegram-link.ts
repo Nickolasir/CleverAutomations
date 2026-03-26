@@ -1,5 +1,5 @@
 /**
- * Clever Automations — Telegram Bot Linking
+ * CleverHub — Telegram Bot Linking
  *
  * Generates a deep-link token so a user can link their Telegram account
  * to receive notifications. The flow is:
@@ -13,7 +13,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 
-const BOT_USERNAME = Deno.env.get("TELEGRAM_BOT_USERNAME") ?? "CleverAutomationsBot";
+const BOT_USERNAME = Deno.env.get("TELEGRAM_BOT_USERNAME") ?? "CleverHubBot";
 const TOKEN_TTL_MINUTES = 15;
 
 Deno.serve(async (req: Request): Promise<Response> => {

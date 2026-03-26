@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Recipe Suggestion Edge Function
+ * CleverHub - Recipe Suggestion Edge Function
  *
  * Receives a list of pantry ingredients and asks an LLM to suggest
  * recipes that can be made with those ingredients.

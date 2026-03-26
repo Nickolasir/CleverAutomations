@@ -75,7 +75,7 @@ log "Configuring ALSA devices..."
 
 ALSA_CONF="/etc/asound.conf"
 cat > "$ALSA_CONF" <<'ALSACONFIG'
-# Clever Automations ALSA Configuration
+# CleverHub ALSA Configuration
 # Input:  ReSpeaker 4-Mic Array (USB)
 # Output: Adafruit I2S 3W Stereo Bonnet
 
@@ -250,7 +250,7 @@ log "Creating systemd service for clever-voice..."
 
 cat > /etc/systemd/system/clever-voice.service <<EOF
 [Unit]
-Description=Clever Automations Voice Pipeline
+Description=CleverHub Voice Pipeline
 After=network-online.target clever-agent.service
 Wants=network-online.target
 BindsTo=clever-agent.service
@@ -288,7 +288,7 @@ EOF
 # Create systemd service for llama.cpp server (local LLM)
 cat > /etc/systemd/system/clever-llm.service <<EOF
 [Unit]
-Description=Clever Automations Local LLM (llama.cpp)
+Description=CleverHub Local LLM (llama.cpp)
 After=network.target
 
 [Service]

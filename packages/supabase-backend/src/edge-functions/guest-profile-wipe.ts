@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Guest Profile Wipe Edge Function
+ * CleverHub - Guest Profile Wipe Edge Function
  *
  * Triggered on reservation checkout. Deletes ALL guest personal data:
  *   - Guest profile record

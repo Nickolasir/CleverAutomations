@@ -517,7 +517,7 @@ export default function SettingsPage() {
       <div className="mt-12 border-t pt-8">
         <h2 className="text-2xl font-bold text-slate-900">Notifications & Messaging</h2>
         <p className="mt-1 text-sm text-slate-500">
-          Configure how you receive alerts from CleverAutomations
+          Configure how you receive alerts from CleverHub
         </p>
       </div>
 

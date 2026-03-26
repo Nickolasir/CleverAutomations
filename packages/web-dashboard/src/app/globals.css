@@ -4,7 +4,7 @@
 
 /**
  * White-label theming via CSS custom properties.
- * These defaults represent the Clever Automations brand.
+ * These defaults represent the CleverHub brand.
  * Tenants can override any of these via their TenantSettings.
  */
 :root {

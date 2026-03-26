@@ -4,7 +4,7 @@
 #
 # Run once on a fresh Raspberry Pi OS Lite (64-bit Bookworm) install.
 # Enables hardware interfaces, installs Docker + Node.js 20 LTS,
-# and configures systemd services for the Clever Automations agent.
+# and configures systemd services for the CleverHub agent.
 #
 # Usage:  sudo bash os-setup.sh
 # ===========================================================================
@@ -42,7 +42,7 @@ if [[ "$ARCH" != "aarch64" ]]; then
   exit 1
 fi
 
-log "Starting Clever Automations OS setup on Raspberry Pi..."
+log "Starting CleverHub OS setup on Raspberry Pi..."
 
 # ---------------------------------------------------------------------------
 # 1. System update
@@ -71,7 +71,7 @@ if ! grep -q 'dtoverlay=hifiberry-dac' "$CONFIG_FILE" 2>/dev/null; then
   log "Adding I2S DAC overlay to $CONFIG_FILE..."
   cat >> "$CONFIG_FILE" <<'DTOVERLAY'
 
-# Clever Automations: I2S audio output (Adafruit I2S 3W Bonnet)
+# CleverHub: I2S audio output (Adafruit I2S 3W Bonnet)
 dtoverlay=hifiberry-dac
 DTOVERLAY
 fi
@@ -81,7 +81,7 @@ if ! grep -q 'dtoverlay=hailo' "$CONFIG_FILE" 2>/dev/null; then
   log "Adding Hailo AI HAT+ PCIe overlay..."
   cat >> "$CONFIG_FILE" <<'HAILO'
 
-# Clever Automations: Hailo AI HAT+ (PCIe Gen 3)
+# CleverHub: Hailo AI HAT+ (PCIe Gen 3)
 dtparam=pciex1_gen=3
 HAILO
 fi
@@ -204,7 +204,7 @@ PI_USER="${SUDO_USER:-pi}"
 
 cat > /etc/systemd/system/clever-agent.service <<EOF
 [Unit]
-Description=Clever Automations Pi Agent
+Description=CleverHub Pi Agent
 After=network-online.target docker.service
 Wants=network-online.target
 Requires=docker.service
@@ -240,7 +240,7 @@ mkdir -p /etc/clever-agent
 # Create a placeholder env file
 if [[ ! -f /etc/clever-agent/env ]]; then
   cat > /etc/clever-agent/env <<'ENVFILE'
-# Clever Automations Agent Environment
+# CleverHub Agent Environment
 # Fill in these values after setup:
 #
 # SUPABASE_URL=https://your-project.supabase.co
@@ -277,7 +277,7 @@ systemctl restart avahi-daemon
 # ---------------------------------------------------------------------------
 log ""
 log "============================================="
-log "  Clever Automations OS Setup Complete"
+log "  CleverHub OS Setup Complete"
 log "============================================="
 log ""
 log "  Hostname:     $HOSTNAME.local"

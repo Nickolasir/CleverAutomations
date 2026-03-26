@@ -14,7 +14,9 @@ export type DeviceCategory =
   | "cover"
   | "media_player"
   | "climate"
-  | "fan";
+  | "fan"
+  | "calendar"
+  | "email_sensor";
 
 export type DeviceState = "on" | "off" | "locked" | "unlocked" | "unknown";
 

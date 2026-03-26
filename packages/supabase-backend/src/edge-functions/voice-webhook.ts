@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Voice Webhook Edge Function
+ * CleverHub - Voice Webhook Edge Function
  *
  * Receives voice session results from the voice pipeline, validates the JWT,
  * stores the encrypted transcript, creates an audit log entry, and broadcasts

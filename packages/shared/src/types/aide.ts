@@ -60,6 +60,30 @@ export interface MedicalInfo {
 // Aide profile (1:1 companion to FamilyMemberProfile)
 // ---------------------------------------------------------------------------
 
+/**
+ * Database row shape — encrypted fields as stored in PostgreSQL.
+ * Use AideProfile (decrypted) for application logic.
+ */
+export interface AideProfileRow {
+  id: string;
+  tenant_id: TenantId;
+  profile_id: string;
+  primary_caregiver_id: UserId | null;
+  medical_info_encrypted: string | null;
+  emergency_contacts_encrypted: string | null;
+  mobility_level: MobilityLevel;
+  cognitive_level: CognitiveLevel;
+  hearing_level: HearingLevel;
+  vision_level: VisionLevel;
+  preferred_interaction: PreferredInteraction;
+  confirmation_mode: ConfirmationMode;
+  speaking_pace: SpeakingPace;
+  timezone: string;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Decrypted aide profile for application use. */
 export interface AideProfile {
   id: string;
   tenant_id: TenantId;
@@ -93,6 +117,25 @@ export type MedicationFrequency =
   | "as_needed"
   | "weekly";
 
+/** Database row shape — encrypted fields as stored in PostgreSQL. */
+export interface AideMedicationRow {
+  id: string;
+  tenant_id: TenantId;
+  aide_profile_id: string;
+  medication_name_encrypted: string;
+  dosage_encrypted: string;
+  frequency: MedicationFrequency;
+  scheduled_times: string[];
+  days_of_week: number[];
+  instructions_encrypted: string | null;
+  refill_date: string | null;
+  prescribing_doctor_encrypted: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+/** Decrypted medication for application use. */
 export interface AideMedication {
   id: string;
   tenant_id: TenantId;

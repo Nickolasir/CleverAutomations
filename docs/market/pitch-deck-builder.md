@@ -1,6 +1,6 @@
 # CleverHome — Builder Vertical Pitch Deck Content
 
-**Clever Automations — CleverHome**
+**CleverHub — CleverHome**
 **"The Smart Home Platform Built for Builders"**
 **Last Updated: 2026-02-12**
 
@@ -13,7 +13,7 @@
 
 Every new home. Every buyer. Every price point.
 
-Clever Automations | Houston, TX
+CleverHub | Houston, TX
 
 ---
 
@@ -396,7 +396,7 @@ No setup frustration. No YouTube tutorials. No compatibility headaches. It just 
 **Contact:**
 [Name], CleverHome Partnerships
 [Phone] | [Email]
-cleverautomations.com/builders
+cleverhub.space/builders
 
 ---
 

@@ -6,6 +6,7 @@ import { useDevices } from "@/hooks/useDevices";
 import { useVoiceLog } from "@/hooks/useVoiceLog";
 import { DeviceGrid } from "@/components/devices/DeviceGrid";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { launchTVDashboard, getTVDashboardURL } from "@/lib/tv-launcher";
 import type { DeviceCategory } from "@clever/shared";
 
 /**
@@ -63,22 +64,25 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      {/* Page title */}
-      <div>
-        <h2 className="text-2xl font-bold text-slate-900">
-          {tenant?.vertical === "clever_host"
-            ? `Welcome, ${tenant?.name ?? "Host"}`
-            : tenant?.vertical === "clever_building"
-              ? `${tenant?.name ?? "Building"} Dashboard`
-              : `Welcome home${tenant?.name ? `, ${tenant.name}` : ""}`}
-        </h2>
-        <p className="mt-1 text-sm text-slate-500">
-          {tenant?.vertical === "clever_host"
-            ? "Manage your rental property and guest experience"
-            : tenant?.vertical === "clever_building"
-              ? "Monitor your building systems and tenants"
-              : "Real-time overview of your smart home"}
-        </p>
+      {/* Page title + TV launcher */}
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">
+            {tenant?.vertical === "clever_host"
+              ? `Welcome, ${tenant?.name ?? "Host"}`
+              : tenant?.vertical === "clever_building"
+                ? `${tenant?.name ?? "Building"} Dashboard`
+                : `Welcome home${tenant?.name ? `, ${tenant.name}` : ""}`}
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            {tenant?.vertical === "clever_host"
+              ? "Manage your rental property and guest experience"
+              : tenant?.vertical === "clever_building"
+                ? "Monitor your building systems and tenants"
+                : "Real-time overview of your smart home"}
+          </p>
+        </div>
+        <TVLaunchButton />
       </div>
 
       {/* Summary metric cards */}
@@ -269,6 +273,44 @@ function FamilyActivitySection({ tenantId }: { tenantId: string | null }) {
           {scheduleCount} active schedule{scheduleCount !== 1 ? "s" : ""} running
         </p>
       )}
+    </div>
+  );
+}
+
+/** Launch the TV dashboard on the Samsung TV with one click */
+function TVLaunchButton() {
+  const [status, setStatus] = useState<"idle" | "launching" | "success" | "error">("idle");
+  const [message, setMessage] = useState("");
+
+  const handleLaunch = async () => {
+    setStatus("launching");
+    setMessage("");
+
+    const result = await launchTVDashboard(getTVDashboardURL());
+    setStatus(result.success ? "success" : "error");
+    setMessage(result.message);
+
+    // Reset after 4s
+    setTimeout(() => {
+      setStatus("idle");
+      setMessage("");
+    }, 4000);
+  };
+
+  return (
+    <div className="flex items-center gap-3">
+      {message && (
+        <span className={`text-xs ${status === "error" ? "text-red-500" : "text-green-600"}`}>
+          {message}
+        </span>
+      )}
+      <button
+        onClick={() => void handleLaunch()}
+        disabled={status === "launching"}
+        className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50 transition-colors"
+      >
+        <span>{status === "launching" ? "Launching..." : "Launch on TV"}</span>
+      </button>
     </div>
   );
 }

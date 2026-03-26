@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Supabase Backend Package Entry Point
+ * CleverHub - Supabase Backend Package Entry Point
  *
  * Exports a configured Supabase client factory, database type mappings,
  * and all realtime channel utilities. Every operation goes through the

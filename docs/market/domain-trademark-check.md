@@ -1,13 +1,13 @@
 # Domain & Trademark Research
 
-**Clever Automations**
+**CleverHub**
 **Last Updated: 2026-02-12**
 
 ---
 
 ## Executive Summary
 
-This document evaluates domain name availability and trademark viability for Clever Automations and its three product brands: CleverHome, CleverHost, and CleverBuilding. The word "clever" is commonly used in technology and home-related branding, which creates both opportunities and challenges. Our strategy must secure defensible digital assets and trademark protection before public launch.
+This document evaluates domain name availability and trademark viability for CleverHub and its three product brands: CleverHome, CleverHost, and CleverBuilding. The word "clever" is commonly used in technology and home-related branding, which creates both opportunities and challenges. Our strategy must secure defensible digital assets and trademark protection before public launch.
 
 **Note**: Domain availability and trademark status change in real-time. All findings below should be verified at the time of action via live WHOIS lookups and USPTO TESS searches. This document provides directional guidance and risk assessment based on research methodology described below.
 
@@ -19,7 +19,7 @@ This document evaluates domain name availability and trademark viability for Cle
 
 | Domain | Likely Status | Est. Cost | Priority | Notes |
 |--------|--------------|-----------|----------|-------|
-| **cleverautomations.com** | Likely Available | $12–15/yr (standard) | **CRITICAL — Register Immediately** | "Clever Automations" is a unique-enough combination that .com availability is plausible. Long but descriptive. |
+| **cleverautomations.com** | Likely Available | $12–15/yr (standard) | **CRITICAL — Register Immediately** | "CleverHub" is a unique-enough combination that .com availability is plausible. Long but descriptive. |
 | **cleverautomations.io** | Likely Available | $35–50/yr | HIGH | .io popular with tech companies. Good for developer-facing documentation. |
 | **cleverautomations.ai** | Possibly Available / Premium | $50–180/yr | HIGH | .ai is the premium tech TLD. Strong signal for AI-powered product. May be available as .ai registrations have expanded. |
 | **cleverhome.com** | Almost Certainly Taken | $5,000–50,000+ (aftermarket) | LOW (too expensive) | Extremely common phrase. Multiple companies use "Clever Home" globally. Expect this to be registered and in active use or parked for resale. |
@@ -117,7 +117,7 @@ Trademark research was conducted using the USPTO Trademark Electronic Search Sys
 | Factor | Assessment |
 |--------|-----------|
 | **Exact match "CLEVER AUTOMATIONS"** | No known registration found. Likely clear. |
-| **Similar marks** | "Clever" is widely used in tech (see conflicts below), but "Clever Automations" as a complete phrase appears unique. |
+| **Similar marks** | "Clever" is widely used in tech (see conflicts below), but "CleverHub" as a complete phrase appears unique. |
 | **Descriptiveness concern** | "Automations" is descriptive of what the product does. A trademark examiner might require disclaimer of "AUTOMATIONS" as merely descriptive. "CLEVER" has acquired distinctiveness through tech usage. |
 | **Overall registrability** | **GOOD**. The composite mark "CLEVER AUTOMATIONS" should be registrable, potentially with a disclaimer on "AUTOMATIONS." |
 | **Recommended class** | Class 9 (smart home hardware); Class 42 (SaaS services); Class 11 (lighting control, thermostat control) |
@@ -134,7 +134,7 @@ Trademark research was conducted using the USPTO Trademark Electronic Search Sys
 | | **CLEVER** — Used alone by various tech companies (Clever, Inc. — edtech company). |
 | **Overall registrability** | **POOR to MODERATE**. "Clever Home" is a common descriptive phrase for smart home products. Likelihood of confusion with existing marks is high. An examiner would likely issue a Section 2(d) refusal (likelihood of confusion) or Section 2(e) refusal (merely descriptive). |
 | **Risk** | A trademark application for CLEVERHOME in Class 9/42 would face significant opposition risk. |
-| **Recommendation** | Do NOT rely on CLEVERHOME as the primary trademark. Use it as a product name under the CLEVER AUTOMATIONS parent brand. Consider alternatives if trademark protection is essential: "Clever Home Hub," "CleverHome by Clever Automations," or a different product name entirely. |
+| **Recommendation** | Do NOT rely on CLEVERHOME as the primary trademark. Use it as a product name under the CLEVER AUTOMATIONS parent brand. Consider alternatives if trademark protection is essential: "Clever Home Hub," "CleverHome by CleverHub," or a different product name entirely. |
 
 ### Search Results: "CLEVERHOST" / "CLEVER HOST"
 
@@ -196,7 +196,7 @@ Trademark research was conducted using the USPTO Trademark Electronic Search Sys
 |------|-------------|--------|------------|
 | cleverhome.com acquired by competitor | Medium | Medium | Secure alternatives (getcleverhome.com, cleverhome.io) immediately |
 | Domain squatter registers our names after we announce | Medium | High | Register ALL domains BEFORE any public announcement (stealth registration) |
-| Existing cleverhome/cleverhost sites create brand confusion | Medium | Medium | Consistent branding as "CleverHome by Clever Automations" to disambiguate |
+| Existing cleverhome/cleverhost sites create brand confusion | Medium | Medium | Consistent branding as "CleverHome by CleverHub" to disambiguate |
 | TLD confusion (.com vs .io vs .ai) | Low | Low | Register multiple TLDs; redirect all to primary |
 
 ### Trademark Risks
@@ -204,7 +204,7 @@ Trademark research was conducted using the USPTO Trademark Electronic Search Sys
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
 | CLEVERHOME application refused on 2(d) grounds | High | High | File with narrow goods description; prepare arguments distinguishing from existing marks; consider alternative names |
-| Clever, Inc. (edtech) opposes any CLEVER-prefix mark | Low-Medium | High | "Clever Automations" is sufficiently different from "Clever" alone; different goods/services; prepare response |
+| Clever, Inc. (edtech) opposes any CLEVER-prefix mark | Low-Medium | High | "CleverHub" is sufficiently different from "Clever" alone; different goods/services; prepare response |
 | UK CleverHost opposes our CLEVERHOST filing | Medium | Medium | Argue different goods/services (rental automation vs. web hosting); geographic separation; narrow description |
 | Common law user surfaces after filing | Low | Medium | Comprehensive search by trademark attorney before filing reduces this risk |
 | International conflicts surface when we expand | Medium | Medium | File Madrid Protocol international applications for key markets (UK, EU, Canada, Australia) after US registration |
@@ -213,7 +213,7 @@ Trademark research was conducted using the USPTO Trademark Electronic Search Sys
 
 | Risk | Probability | Impact | Mitigation |
 |------|-------------|--------|------------|
-| "Clever" prefix becomes generic/diluted | Medium (long-term) | Medium | Build brand equity in "Clever Automations" composite; use design marks (logo) for stronger protection |
+| "Clever" prefix becomes generic/diluted | Medium (long-term) | Medium | Build brand equity in "CleverHub" composite; use design marks (logo) for stronger protection |
 | Rebranding required for one product line | Low-Medium | High | Architect brand from day one so product names are interchangeable (e.g., "Clever[X]" pattern allows renaming one product without affecting others) |
 
 ---

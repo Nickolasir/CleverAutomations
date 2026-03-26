@@ -1,5 +1,5 @@
 /**
- * Clever Automations — WhatsApp Phone Verification
+ * CleverHub — WhatsApp Phone Verification
  *
  * Initiates WhatsApp phone verification for a user. The flow is:
  *   1. POST / — user submits phone (E.164), system stores it and sends
@@ -123,7 +123,7 @@ Deno.serve(async (req: Request): Promise<Response> => {
             to: phone,
             type: "text",
             text: {
-              body: "CleverAutomations: Reply YES to confirm linking this number for notifications.",
+              body: "CleverHub: Reply YES to confirm linking this number for notifications.",
             },
           }),
         });

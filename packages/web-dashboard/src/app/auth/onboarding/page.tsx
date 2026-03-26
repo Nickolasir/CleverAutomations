@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback, type FormEvent } from "react";
+import React, { useState, useEffect, useRef, useCallback, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import type { MarketVertical } from "@clever/shared";
 import { createBrowserClient } from "@/lib/supabase/client";
@@ -12,7 +12,7 @@ const VERTICALS: {
   label: string;
   tagline: string;
   features: string[];
-  icon: JSX.Element;
+  icon: React.ReactNode;
 }[] = [
   {
     value: "clever_home",

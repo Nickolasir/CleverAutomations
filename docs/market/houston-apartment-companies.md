@@ -1,6 +1,6 @@
 # Top 20+ Houston Apartment Management Companies
 
-**Clever Automations — CleverBuilding Vertical**
+**CleverHub — CleverBuilding Vertical**
 **Market: Houston / Harris County, TX**
 **Last Updated: 2026-02-12**
 

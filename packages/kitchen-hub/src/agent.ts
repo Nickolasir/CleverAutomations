@@ -1,7 +1,7 @@
 /**
  * Kitchen Sub-Hub Agent
  *
- * Raspberry Pi-based kitchen satellite that extends the CleverAutomations
+ * Raspberry Pi-based kitchen satellite that extends the CleverHub
  * platform with ePantry inventory, shopping list management, receipt/barcode
  * scanning, pantry photo analysis, kitchen timers, and recipe suggestions.
  *

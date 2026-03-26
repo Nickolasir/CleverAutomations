@@ -1,4 +1,4 @@
-# STRIDE Threat Model - Clever Automations
+# STRIDE Threat Model - CleverHub
 
 **Document Owner:** security-auditor
 **Last Updated:** 2026-02-12
@@ -24,7 +24,7 @@
 
 ### Architecture Components
 
-The Clever Automations platform consists of five primary attack surface areas:
+The CleverHub platform consists of five primary attack surface areas:
 
 ```
                                 CLOUD BOUNDARY
@@ -96,7 +96,7 @@ The Clever Automations platform consists of five primary attack surface areas:
 
 | Attribute | Value |
 |-----------|-------|
-| **Description** | An attacker connects a rogue Raspberry Pi or other device to the network, claiming to be an authorized Clever Automations hub, and issues commands to smart home devices. |
+| **Description** | An attacker connects a rogue Raspberry Pi or other device to the network, claiming to be an authorized CleverHub hub, and issues commands to smart home devices. |
 | **Likelihood** | **Medium** |
 | **Impact** | **High** |
 | **Attack Vector** | Local network (mDNS/SSDP spoofing, ARP spoofing) |

@@ -22,7 +22,7 @@ import type { HAEntityState } from "./rest-client.js";
 // ---------------------------------------------------------------------------
 
 export interface HAWebSocketClientConfig {
-  /** WebSocket URL (e.g. ws://homeassistant.local:8123/api/websocket) */
+  /** WebSocket URL (must use wss:// in production; ws:// only allowed with allowInsecure) */
   url: string;
   /** Long-lived access token */
   token: string;
@@ -38,6 +38,14 @@ export interface HAWebSocketClientConfig {
   pingIntervalMs?: number;
   /** Pong timeout in ms (default: 10000) */
   pongTimeoutMs?: number;
+  /**
+   * Allow unencrypted ws:// connections. Only for local development with
+   * trusted networks. Set HA_ALLOW_INSECURE=true in env to enable.
+   * In production, always use wss:// with a valid TLS certificate.
+   */
+  allowInsecure?: boolean;
+  /** Skip TLS certificate verification (self-signed certs). Default: false. */
+  rejectUnauthorized?: boolean;
 }
 
 /** Emitted when a device state changes. */
@@ -153,6 +161,8 @@ export class HAWebSocketClient extends EventEmitter {
   private readonly reconnectMaxDelayMs: number;
   private readonly pingIntervalMs: number;
   private readonly pongTimeoutMs: number;
+  private readonly allowInsecure: boolean;
+  private readonly rejectUnauthorized: boolean;
 
   constructor(config: HAWebSocketClientConfig) {
     super();
@@ -164,6 +174,18 @@ export class HAWebSocketClient extends EventEmitter {
     this.reconnectMaxDelayMs = config.reconnectMaxDelayMs ?? 30_000;
     this.pingIntervalMs = config.pingIntervalMs ?? 30_000;
     this.pongTimeoutMs = config.pongTimeoutMs ?? 10_000;
+    this.allowInsecure = config.allowInsecure ?? (process.env.HA_ALLOW_INSECURE === "true");
+    this.rejectUnauthorized = config.rejectUnauthorized ?? true;
+
+    // Enforce wss:// in production unless explicitly opted out
+    if (this.url.startsWith("ws://") && !this.allowInsecure) {
+      throw new Error(
+        "Unencrypted ws:// connections are not allowed. " +
+        "Use wss:// with a valid TLS certificate, or set HA_ALLOW_INSECURE=true " +
+        "for local development only. The HA long-lived access token is sent over " +
+        "this connection and must be encrypted in transit."
+      );
+    }
   }
 
   // -----------------------------------------------------------------------
@@ -213,7 +235,11 @@ export class HAWebSocketClient extends EventEmitter {
 
   private openSocket(): void {
     try {
-      this.ws = new WebSocket(this.url);
+      const wsOptions: WebSocket.ClientOptions = {};
+      if (this.url.startsWith("wss://")) {
+        wsOptions.rejectUnauthorized = this.rejectUnauthorized;
+      }
+      this.ws = new WebSocket(this.url, wsOptions);
     } catch (err) {
       this.emit(
         "error",

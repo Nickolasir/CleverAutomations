@@ -6,7 +6,7 @@
  * allowed devices, and restrictions.
  */
 
-import type { WakeWordEntry, AgentPersonality, AideProfile, AideMedication, AideRoutine } from "@clever/shared";
+import type { WakeWordEntry, AgentPersonality, AideProfile, AideMedication, AideRoutine, EmailAccountInfo, CalendarAccountInfo, EmailSummary, CalendarEventInfo } from "@clever/shared";
 import type { DeviceStateInfo } from "./types.js";
 
 // ---------------------------------------------------------------------------
@@ -412,6 +412,238 @@ export function buildMedicationReminderPrompt(
   lines.push("```medication");
   lines.push('{"status": "pending", "confirmed": false}');
   lines.push("```");
+
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Email & Calendar prompt
+// ---------------------------------------------------------------------------
+
+export interface EmailCalendarPromptContext {
+  emailAccounts: EmailAccountInfo[];
+  calendarAccounts: CalendarAccountInfo[];
+  unreadCounts: Record<string, number>;
+  recentEmails: EmailSummary[];
+  upcomingEvents: CalendarEventInfo[];
+}
+
+export function buildEmailCalendarSystemPrompt(
+  context: EmailCalendarPromptContext,
+): string {
+  const lines: string[] = [];
+
+  lines.push(
+    "You are Clever, a smart home assistant with email and calendar monitoring capabilities.",
+  );
+  lines.push(
+    "You can check email inboxes, read email summaries, and manage calendar events via Home Assistant integrations.",
+  );
+
+  // Linked email accounts
+  if (context.emailAccounts.length > 0) {
+    lines.push("");
+    lines.push("LINKED EMAIL ACCOUNTS:");
+    for (const acc of context.emailAccounts) {
+      const unread = context.unreadCounts[acc.id] ?? 0;
+      lines.push(
+        `  - ${acc.display_name} (${acc.provider}): ${unread} unread`,
+      );
+    }
+  } else {
+    lines.push("");
+    lines.push("No email accounts are linked. Suggest the user link their accounts in Settings.");
+  }
+
+  // Recent emails
+  if (context.recentEmails.length > 0) {
+    lines.push("");
+    lines.push("RECENT EMAILS:");
+    for (const email of context.recentEmails.slice(0, 10)) {
+      const readFlag = email.is_read ? "" : "[UNREAD] ";
+      const importantFlag = email.is_important ? "[!] " : "";
+      lines.push(
+        `  - ${readFlag}${importantFlag}From: ${email.sender} | Subject: ${email.subject} | ${email.received_at}`,
+      );
+    }
+  }
+
+  // Linked calendar accounts
+  if (context.calendarAccounts.length > 0) {
+    lines.push("");
+    lines.push("LINKED CALENDARS:");
+    for (const cal of context.calendarAccounts) {
+      const primary = cal.is_primary ? " (primary)" : "";
+      lines.push(`  - ${cal.display_name} (${cal.provider})${primary}`);
+    }
+  } else {
+    lines.push("");
+    lines.push("No calendar accounts are linked. Suggest the user link their calendars in Settings.");
+  }
+
+  // Upcoming events
+  if (context.upcomingEvents.length > 0) {
+    lines.push("");
+    lines.push("UPCOMING EVENTS (next 24 hours):");
+    for (const event of context.upcomingEvents) {
+      const loc = event.location ? ` @ ${event.location}` : "";
+      const allDay = event.is_all_day ? " (all day)" : ` ${event.start_time} - ${event.end_time}`;
+      lines.push(`  - ${event.summary}${allDay}${loc}`);
+    }
+  } else {
+    lines.push("");
+    lines.push("No upcoming events in the next 24 hours.");
+  }
+
+  // Response format for calendar commands
+  lines.push("");
+  lines.push("CALENDAR EVENT CREATION FORMAT:");
+  lines.push(
+    "When the user asks to create an event, include a JSON block in your response:",
+  );
+  lines.push("```calendar_intent");
+  lines.push(
+    '{"action": "create", "summary": "Meeting title", "start_date_time": "2026-03-25T09:00:00", "end_date_time": "2026-03-25T09:30:00", "description": "", "location": ""}',
+  );
+  lines.push("```");
+  lines.push(
+    "Always confirm the details with the user before creating. Include a natural language response.",
+  );
+
+  // Email sending disabled notice
+  lines.push("");
+  lines.push("IMPORTANT — EMAIL SENDING IS DISABLED:");
+  lines.push(
+    "You CANNOT send, compose, reply to, or forward emails. If the user asks to send an email, " +
+      "respond: \"Email sending is currently disabled for safety. I can read your emails and check " +
+      "your inbox, but sending requires a manual code update to enable.\"",
+  );
+  lines.push("Do NOT attempt to generate an email send intent.");
+
+  lines.push("");
+  lines.push("Keep responses concise. Summarize emails and events naturally.");
+
+  return lines.join("\n");
+}
+
+// ---------------------------------------------------------------------------
+// Nutrition prompts
+// ---------------------------------------------------------------------------
+
+import type {
+  DailyNutritionSummary,
+  WeeklyNutritionSummary,
+  NutritionGoals,
+} from "@clever/shared";
+
+/**
+ * System prompt for extracting food items from natural language.
+ * The LLM should return structured JSON with identified foods and estimates.
+ */
+export function buildNutritionLogPrompt(
+  message: string,
+  dailySummary: DailyNutritionSummary,
+  goals: NutritionGoals | null,
+): string {
+  const lines: string[] = [];
+
+  lines.push("You are a nutrition tracking assistant for a smart home system.");
+  lines.push("The user is telling you what they ate or drank. Extract the food items and estimate nutritional values.");
+  lines.push("");
+  lines.push("Respond with ONLY a JSON object (no markdown, no extra text):");
+  lines.push("{");
+  lines.push('  "items": [');
+  lines.push('    { "name": "food name", "quantity": 1, "unit": "cup/slice/piece/etc", "estimated_calories": 150, "estimated_protein_g": 5, "estimated_carbs_g": 20, "estimated_fat_g": 7 }');
+  lines.push("  ],");
+  lines.push('  "meal_type": "breakfast|lunch|dinner|snack|drink",');
+  lines.push('  "response_message": "Friendly confirmation message to the user"');
+  lines.push("}");
+  lines.push("");
+  lines.push("RULES:");
+  lines.push("- Infer meal_type from time of day or context. Default to 'snack' if unclear.");
+  lines.push("- For beverages (coffee, water, juice, soda), use meal_type 'drink'.");
+  lines.push("- Estimate calories and macros as accurately as possible for typical serving sizes.");
+  lines.push("- If the user mentions a quantity, use it. Otherwise assume 1 serving.");
+  lines.push("- The response_message should be warm and brief, confirming what was logged.");
+
+  if (dailySummary.food_entries_count > 0) {
+    lines.push("");
+    lines.push(`TODAY'S RUNNING TOTAL: ${Math.round(dailySummary.total_calories)} calories, ${Math.round(dailySummary.total_protein_g)}g protein, ${Math.round(dailySummary.total_carbs_g)}g carbs, ${Math.round(dailySummary.total_fat_g)}g fat`);
+  }
+
+  if (goals) {
+    lines.push("");
+    lines.push("USER'S DAILY GOALS:");
+    if (goals.daily_calories) lines.push(`  Calories: ${goals.daily_calories}`);
+    if (goals.daily_protein_g) lines.push(`  Protein: ${goals.daily_protein_g}g`);
+    if (goals.daily_carbs_g) lines.push(`  Carbs: ${goals.daily_carbs_g}g`);
+    if (goals.daily_fat_g) lines.push(`  Fat: ${goals.daily_fat_g}g`);
+    lines.push("Include a brief note about goal progress in the response_message.");
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * System prompt for answering nutrition queries (daily/weekly summaries).
+ */
+export function buildNutritionSummaryPrompt(
+  dailySummary: DailyNutritionSummary,
+  weeklySummary: WeeklyNutritionSummary,
+  goals: NutritionGoals | null,
+): string {
+  const lines: string[] = [];
+
+  lines.push("You are a nutrition tracking assistant for a smart home system.");
+  lines.push("Answer the user's question about their nutrition data using the information below.");
+  lines.push("Keep responses concise and conversational.");
+  lines.push("");
+
+  // Today's summary
+  lines.push("TODAY'S NUTRITION:");
+  lines.push(`  Calories: ${Math.round(dailySummary.total_calories)}`);
+  lines.push(`  Protein: ${Math.round(dailySummary.total_protein_g)}g`);
+  lines.push(`  Carbs: ${Math.round(dailySummary.total_carbs_g)}g`);
+  lines.push(`  Fat: ${Math.round(dailySummary.total_fat_g)}g`);
+  lines.push(`  Fiber: ${Math.round(dailySummary.total_fiber_g)}g`);
+  lines.push(`  Water: ${dailySummary.total_water_ml}ml`);
+  lines.push(`  Entries logged: ${dailySummary.food_entries_count}`);
+
+  // Goals comparison
+  if (goals) {
+    lines.push("");
+    lines.push("DAILY GOALS:");
+    if (goals.daily_calories) {
+      const pct = Math.round((dailySummary.total_calories / goals.daily_calories) * 100);
+      lines.push(`  Calories: ${goals.daily_calories} (${pct}% consumed)`);
+    }
+    if (goals.daily_protein_g) {
+      const pct = Math.round((dailySummary.total_protein_g / goals.daily_protein_g) * 100);
+      lines.push(`  Protein: ${goals.daily_protein_g}g (${pct}% consumed)`);
+    }
+    if (goals.daily_carbs_g) {
+      const pct = Math.round((dailySummary.total_carbs_g / goals.daily_carbs_g) * 100);
+      lines.push(`  Carbs: ${goals.daily_carbs_g}g (${pct}% consumed)`);
+    }
+    if (goals.daily_fat_g) {
+      const pct = Math.round((dailySummary.total_fat_g / goals.daily_fat_g) * 100);
+      lines.push(`  Fat: ${goals.daily_fat_g}g (${pct}% consumed)`);
+    }
+    if (goals.daily_water_ml) {
+      const pct = Math.round((dailySummary.total_water_ml / goals.daily_water_ml) * 100);
+      lines.push(`  Water: ${goals.daily_water_ml}ml (${pct}% consumed)`);
+    }
+  }
+
+  // Weekly summary
+  if (weeklySummary.days.length > 0) {
+    lines.push("");
+    lines.push("THIS WEEK'S DAILY AVERAGES:");
+    lines.push(`  Calories: ${Math.round(weeklySummary.averages.calories)}`);
+    lines.push(`  Protein: ${Math.round(weeklySummary.averages.protein_g)}g`);
+    lines.push(`  Carbs: ${Math.round(weeklySummary.averages.carbs_g)}g`);
+    lines.push(`  Fat: ${Math.round(weeklySummary.averages.fat_g)}g`);
+  }
 
   return lines.join("\n");
 }

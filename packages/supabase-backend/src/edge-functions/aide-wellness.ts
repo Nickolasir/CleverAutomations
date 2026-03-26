@@ -1,5 +1,5 @@
 /**
- * Clever Automations — CleverAide Wellness Edge Function
+ * CleverHub — CleverAide Wellness Edge Function
  *
  * CRUD endpoints for wellness check-ins, medication management, and
  * caregiver dashboard data.

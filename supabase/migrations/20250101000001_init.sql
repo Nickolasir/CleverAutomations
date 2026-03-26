@@ -1,5 +1,5 @@
 -- =============================================================================
--- Clever Automations - Migration 001: Initial Schema (Supabase-compatible)
+-- CleverHub - Migration 001: Initial Schema (Supabase-compatible)
 -- =============================================================================
 -- Combined migration: schema + RLS + auth.
 -- Idempotent where possible (IF NOT EXISTS, OR REPLACE).

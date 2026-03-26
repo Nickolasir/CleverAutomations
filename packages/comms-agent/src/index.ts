@@ -1,0 +1,10 @@
+export { CommsAgent } from "./agent.js";
+export type { CommsAgentConfig } from "./agent.js";
+export { GmailClient } from "./email/gmail-client.js";
+export { OutlookClient } from "./email/outlook-client.js";
+export { EmailProvider, createEmailProvider } from "./email/email-provider.js";
+export { EmailSummarizer } from "./email/email-summarizer.js";
+export { FamilyMessenger } from "./family/family-messenger.js";
+export { AccessChecker } from "./privacy/access-checker.js";
+export { RateLimiter } from "./privacy/rate-limiter.js";
+export { AuditLogger } from "./privacy/audit-logger.js";

@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Development Seed Data
+ * CleverHub - Development Seed Data
  *
  * Seeds a local Supabase instance with the minimum data needed for the app:
  *   - 1 tenant (CleverHost demo)
@@ -140,7 +140,7 @@ async function seedRooms(): Promise<void> {
 
 async function main(): Promise<void> {
   console.log("===========================================");
-  console.log("Clever Automations - Seeding Development DB");
+  console.log("CleverHub - Seeding Development DB");
   console.log("===========================================");
   console.log(`Target: ${SUPABASE_URL}`);
   console.log("");

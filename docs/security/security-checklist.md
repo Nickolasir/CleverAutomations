@@ -74,19 +74,35 @@ Copy this checklist into your PR description and check each item:
 - [ ] **Wipe test updated.** The `guest-wipe.test.ts` file includes a test verifying the new data type is cleared during wipe.
 - [ ] **No PII persists after wipe.** After the wipe process completes, a query for the guest's data returns empty or anonymized results for the new data type.
 
+### 10. GDPR Compliance
+
+- [ ] **Consent recorded before processing.** If the PR adds a new data processing activity that relies on consent (Art 6.1.a), the code verifies that the user has an active `consent_records` entry of the appropriate type before proceeding.
+- [ ] **Encrypted fields use `encrypt_pii()` helper.** All new PII fields stored in the database use the `encrypt_pii()` / `encrypt_pii_jsonb()` SQL functions or the TypeScript `encryptField()` wrapper. No plaintext PII in new columns.
+- [ ] **Data retention policy updated.** If the PR creates a new table that stores personal data, the table is added to the data retention enforcement function (`enforce_data_retention`) with an appropriate TTL.
+- [ ] **DPIA reviewed for new monitoring/profiling.** If the PR adds behavioral monitoring, sensor processing, or any automated decision-making feature, the DPIA (`docs/legal/dpia.md`) is reviewed and updated.
+- [ ] **DPA verified for new third-party APIs.** If the PR integrates a new third-party service that processes personal data, a Data Processing Agreement requirement is documented and tracked.
+- [ ] **Data subject rights unaffected.** The GDPR data export endpoint (`gdpr-data-export.ts`) is updated to include any new PII table, ensuring the Right of Access covers all user data.
+- [ ] **Children's data gated by parental consent.** If the PR processes data from family members with age_group in (toddler, child, tween, teenager), it verifies `has_parental_consent()` before processing.
+- [ ] **Processing restriction respected.** If the PR adds data processing logic, it checks the `processing_restricted` flag on the user record and skips processing if restricted (Art 18).
+- [ ] **Health data requires explicit consent.** Any new processing of CleverAide data verifies `has_active_consent(user_id, 'health_data')` before proceeding (Art 9).
+- [ ] **Audit log for GDPR events.** Consent grants, withdrawals, data exports, erasures, and restriction changes are logged in `audit_logs`.
+
 ---
 
 ## Quick Reference: When to Check What
 
 | If your PR... | Check sections |
 |---------------|---------------|
-| Adds a new database table | 1, 2, 3, 6 |
-| Adds a new API endpoint or Edge Function | 2, 3, 4, 7, 8 |
-| Modifies the voice pipeline | 5, 6, 8 |
-| Adds guest-related features | 1, 3, 6, 9 |
+| Adds a new database table | 1, 2, 3, 6, 10 |
+| Adds a new API endpoint or Edge Function | 2, 3, 4, 7, 8, 10 |
+| Modifies the voice pipeline | 5, 6, 8, 10 |
+| Adds guest-related features | 1, 3, 6, 9, 10 |
 | Introduces a new environment variable | 4 |
-| Modifies user roles or permissions | 1, 2, 3, 6 |
-| Adds device command functionality | 6, 7, 8 |
+| Modifies user roles or permissions | 1, 2, 3, 6, 10 |
+| Adds device command functionality | 6, 7, 8, 10 |
+| Stores new PII or health data | 1, 6, 10 |
+| Integrates a new third-party API | 4, 10 |
+| Adds child/family data processing | 1, 3, 10 |
 
 ---
 

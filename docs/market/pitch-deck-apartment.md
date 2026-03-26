@@ -1,6 +1,6 @@
 # CleverBuilding — Apartment Complex Vertical Pitch Deck Content
 
-**Clever Automations — CleverBuilding**
+**CleverHub — CleverBuilding**
 **"Smart Buildings. Happier Residents. Higher NOI."**
 **Last Updated: 2026-02-12**
 
@@ -13,7 +13,7 @@
 
 The multi-tenant smart home platform for apartment communities.
 
-Clever Automations | Houston, TX
+CleverHub | Houston, TX
 
 ---
 
@@ -419,7 +419,7 @@ Smart home features accelerate lease-up velocity for new communities:
 **Contact:**
 [Name], CleverBuilding Enterprise Sales
 [Phone] | [Email]
-cleverautomations.com/apartments
+cleverhub.space/apartments
 
 ---
 

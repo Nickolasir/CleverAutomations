@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg viewBox="0 0 320 100" xmlns="http://www.w3.org/2000/svg" width="320" height="100">
+
+  <!-- Central Charcoal Circle -->
+  <circle cx="28" cy="50" r="22" fill="#2C2C2C"/>
+
+  <!-- Orbital Ellipse Ring (rotated -15deg) -->
+  <g transform="translate(28, 50) rotate(-15)">
+    <ellipse cx="0" cy="0" rx="30" ry="10" fill="none" stroke="#D4A017" stroke-width="2.5"/>
+  </g>
+
+  <!-- Bright Gold Glow Dot on the Ring -->
+  <circle cx="55" cy="42" r="3" fill="#E8B931"/>
+
+  <!-- Wordmark: "Clever" in Charcoal -->
+  <text x="75" y="52" font-family="'Plus Jakarta Sans', sans-serif" font-size="20" font-weight="700" fill="#2C2C2C">Clever</text>
+
+  <!-- Wordmark: "Hub" in Amber -->
+  <text x="188" y="52" font-family="'Plus Jakarta Sans', sans-serif" font-size="20" font-weight="700" fill="#D4A017">Hub</text>
+
+  <!-- Subtitle "SMART HOME" -->
+  <text x="75" y="68" font-family="Inter, sans-serif" font-size="10" font-weight="400" fill="#9C9C9C" letter-spacing="3">SMART HOME</text>
+</svg>

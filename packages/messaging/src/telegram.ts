@@ -19,6 +19,13 @@ import type {
   MessageButton,
   InboundMessage,
 } from "@clever/shared";
+import {
+  sanitizeMessageText,
+  sanitizeSenderId,
+  sanitizeUsername,
+  sanitizeId,
+  sanitizeRawPayload,
+} from "@clever/shared";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -172,11 +179,11 @@ export class TelegramGateway implements MessagingGateway {
 
       return {
         channel: "telegram",
-        sender_id: String(from["id"]),
-        sender_name: (from["first_name"] as string) ?? null,
-        message_text: text,
+        sender_id: sanitizeSenderId(String(from["id"])),
+        sender_name: sanitizeUsername(from["first_name"]),
+        message_text: sanitizeMessageText(text),
         timestamp: new Date().toISOString(),
-        raw_payload: payload,
+        raw_payload: sanitizeRawPayload(payload),
       };
     }
 
@@ -189,13 +196,13 @@ export class TelegramGateway implements MessagingGateway {
 
       return {
         channel: "telegram",
-        sender_id: String(from["id"]),
-        sender_name: (from["first_name"] as string) ?? null,
+        sender_id: sanitizeSenderId(String(from["id"])),
+        sender_name: sanitizeUsername(from["first_name"]),
         message_text: "",
-        button_callback_id: data,
-        button_callback_payload: data,
+        button_callback_id: sanitizeId(data),
+        button_callback_payload: sanitizeId(data),
         timestamp: new Date().toISOString(),
-        raw_payload: payload,
+        raw_payload: sanitizeRawPayload(payload),
       };
     }
 

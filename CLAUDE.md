@@ -1,4 +1,4 @@
-Clever Automations - AI-Powered Smart Home Butler
+CleverHub - AI-Powered Smart Home Butler
 Mission
 Build an AI-powered electronic butler platform combining OpenClaw (MIT License) and Home Assistant (Apache 2.0) on Raspberry Pi 5 hardware. Three market verticals: homebuilders, Airbnb hosts, apartment complexes. Security is the #1 design priority.
 Architecture
@@ -11,7 +11,7 @@ NVMe SSD via M.2 HAT+ for model storage and Home Assistant data
 Adafruit I2S 3W Bonnet + powered speakers for audio output
 Active cooling heatsink + fan
 
-ESP32-S3 Room Satellite Nodes (~$8 each):
+ESP32-S3 Room Satellite Nodes:
 One per room for distributed sensing and voice capture. Connects to Pi hub over WiFi.
 Dual Xtensa LX7 cores, 8MB PSRAM, Wi-Fi 4 + Bluetooth 5.0
 INMP441 MEMS microphone for room-level voice capture
@@ -110,6 +110,74 @@ Intent confidence threshold: voice commands below 0.7 confidence require confirm
 Family permission checks: every device command from a non-adult family member must pass through the FamilyPermissionResolver before execution.
 Emergency commands must bypass all permission restrictions for all ages.
 Parental notifications must be generated for permission denials and emergency commands from child profiles.
+All PII must be encrypted at rest using encrypt_pii() / encrypt_pii_jsonb() SQL functions. No plaintext PII in database columns.
+Health data (GDPR Art 9 special category) requires explicit consent check via has_active_consent() before processing.
+Children's data requires parental consent verification via has_parental_consent() before processing.
+All data in transit must use TLS 1.2+. HA WebSocket must use wss:// in production (ws:// only with HA_ALLOW_INSECURE=true for local dev).
+GDPR data subject rights (export, erasure, rectification, restriction) must remain functional — update gdpr-data-export.ts when adding new PII tables.
+Check processing_restricted flag on user record before processing any personal data.
+
+Encryption Architecture
+All PII is encrypted at rest using pgcrypto PGP symmetric encryption (AES-256, CFB mode, S2K key derivation, SHA-1 MDC integrity).
+One master key is stored in Supabase Vault via vault.create_secret() — must be created BEFORE running migration 008.
+Per-tenant key derivation: passphrase = master_key || ':' || tenant_id (unique encryption key per tenant from single Vault secret).
+Encryption/decryption happens inside PostgreSQL via SECURITY DEFINER functions — raw keys never leave the database.
+pgp_sym_encrypt handles IV generation, key derivation, and integrity checking internally — no manual wire format.
+Fields that need indexed lookups (email) use a SHA-256 hash for uniqueness + encrypted copy for display.
+pgcrypto functions are in the extensions schema — all functions use SET search_path = public, extensions.
+NOTE: pgsodium is deprecated on Supabase. Do NOT use pgsodium or raw INSERT INTO vault.secrets (use vault.create_secret() instead).
+Mobile app stores auth tokens in OS keychain (expo-secure-store), not AsyncStorage.
+TLS certificate pins for voice APIs (Deepgram, Groq, Cartesia) are in packages/shared/src/crypto/tls-config.ts.
+
+Key Files:
+- Key management migration: packages/supabase-backend/src/migrations/008_encryption_key_management.sql
+- Health data encryption: packages/supabase-backend/src/migrations/009_encrypt_health_data.sql
+- PII field encryption: packages/supabase-backend/src/migrations/010_encrypt_pii_fields.sql
+- TypeScript helpers: packages/shared/src/crypto/encryption.ts
+- TLS config: packages/shared/src/crypto/tls-config.ts
+
+SQL helper functions (use these, never roll your own):
+- encrypt_pii(plaintext, tenant_id) → encrypted TEXT
+- decrypt_pii(ciphertext, tenant_id) → plaintext TEXT
+- encrypt_pii_jsonb(data, tenant_id) → encrypted TEXT
+- decrypt_pii_jsonb(ciphertext, tenant_id) → JSONB
+- hash_pii(value) → SHA-256 hex TEXT
+
+GDPR Compliance
+Full GDPR compliance framework implemented. All data processing requires documented lawful basis (see docs/legal/lawful-basis-register.md).
+
+Consent Management:
+- consent_records table tracks per-user consent by type (data_processing, voice_recording, health_data, child_data, marketing, etc.)
+- has_active_consent(user_id, consent_type) checks consent before processing
+- Consent withdrawal triggers cascading data deletion for that category
+- Edge Function: packages/supabase-backend/src/edge-functions/gdpr-consent.ts
+
+Data Subject Rights (Edge Functions):
+- gdpr-data-export.ts — Right of Access + Portability (Art 15/20), rate limited 1/24h
+- gdpr-data-erasure.ts — Right to Erasure (Art 17), double-opt-in confirmation, anonymizes audit logs
+- gdpr-data-rectify.ts — Right to Rectification (Art 16), re-encrypts updated fields
+- gdpr-restrict.ts — Right to Restriction (Art 18), sets processing_restricted flag in JWT
+
+Data Retention:
+- Configurable per-tenant via tenants.data_retention_policy JSONB
+- Defaults: audit_logs 90d, sensor_telemetry 30d, voice 90d, health 180d, medications 365d
+- Enforcement: packages/supabase-backend/src/edge-functions/data-retention-cleanup.ts (runs daily)
+- IP addresses hashed after 7 days
+- Migration: packages/supabase-backend/src/migrations/011_data_retention.sql
+
+Children's Data (Art 8):
+- parental_consent_recorded flag on family_member_profiles
+- Block child profile creation until parental consent recorded
+- has_parental_consent(profile_id) check before processing
+
+Key Files:
+- GDPR migration: packages/supabase-backend/src/migrations/012_gdpr_consent.sql
+- GDPR types: packages/shared/src/types/gdpr.ts
+- Privacy policy: docs/legal/privacy-policy.md
+- Lawful basis register: docs/legal/lawful-basis-register.md
+- DPIA: docs/legal/dpia.md
+- Breach response: docs/legal/breach-response-plan.md
+- Security checklist (Section 10 — GDPR): docs/security/security-checklist.md
 
 Family Subagent System
 Each family member gets a named personal agent (e.g., "Hey Jarvis", "Hey Luna", "Hey Buddy") with age-based permissions layered on top of the existing 5-level role system. The FamilyAgeGroup enum (adult, teenager, tween, child, toddler, adult_visitor) provides fine-grained application-level permission control resolved at command execution time. The existing UserRole remains the RLS security boundary.
@@ -207,6 +275,7 @@ packages/
   mobile-app/         # React Native iOS/Android app (includes chat + voice UI)
   pi-agent/           # Raspberry Pi device agent, hardware config, deployment
   kitchen-hub/        # Kitchen Sub-Hub: ePantry, shopping list, receipt/barcode scanning, timers
+  comms-agent/        # Communications Sub-Agent: email (Gmail/Outlook OAuth), calendar, family messaging, privacy controls
   esp32-satellite/    # ESP32-S3 room node firmware (ESPHome configs + custom components)
   shared/             # Shared TypeScript types, utils, constants, permission engine
 hardware/             # BOM, enclosure CAD, wiring diagrams
@@ -225,7 +294,7 @@ BLE presence data from satellites feeds into HA for occupancy-based automations.
 
 Phase 2 Future Work (do NOT build yet, but design interfaces for)
 
-ESP32-S3 Room Satellites: Firmware for distributed wake word (microWakeWord), on-device command recognition (ESP-SR MultiNet), mic streaming, BLE presence, and GPIO sensors. ESPHome configs for zero-code HA integration. Custom ESP-IDF components for MultiNet and audio streaming. Design the Pi Agent audio ingestion interface to accept streams from multiple satellites. Target: whole-home voice coverage at ~$8-15 per room vs. running mic wire.
+ESP32-S3 Room Satellites: Firmware for distributed wake word (microWakeWord), on-device command recognition (ESP-SR MultiNet), mic streaming, BLE presence, and GPIO sensors. ESPHome configs for zero-code HA integration. Custom ESP-IDF components for MultiNet and audio streaming. Design the Pi Agent audio ingestion interface to accept streams from multiple satellites. Target: whole-home voice coverage with low-cost satellite nodes.
 Moshi speech-to-speech: Kyutai Labs model (CC-BY 4.0), 160-200ms latency, requires cloud GPU. Economics break even at ~30-50 devices. Design voice pipeline interface to be swappable.
 Kyutai Pocket TTS: 100M param, runs on CPU in real-time. Could replace Cartesia for local TTS.
 Property management API integration: Guesty/Hospitable for Airbnb host features (no direct Airbnb API access available).
@@ -245,3 +314,11 @@ ESPHome: https://esphome.io/
 Home Assistant: https://developers.home-assistant.io/docs/api/rest
 OpenRouter: https://openrouter.ai/docs (non-voice path only)
 OpenClaw: https://github.com/openclaw/openclaw
+
+GDPR Pre-Production Checklist (DAILY REMINDER — incomplete items)
+The following items MUST be completed before production deployment. Remind the user about these at the start of every conversation until all are checked off.
+
+- [ ] Execute DPAs (Data Processing Agreements) with: Deepgram, Groq, Cartesia, Supabase, Telegram, WhatsApp/Meta. Most providers have standard DPAs on their legal/compliance pages. Download, sign, and file.
+- [ ] Fill in placeholder fields in legal docs: [INSERT DATE], [INSERT ADDRESS], [INSERT NAME] in docs/legal/privacy-policy.md, docs/legal/dpia.md, docs/legal/breach-response-plan.md.
+- [ ] Appoint a Data Protection Officer (DPO). Required under GDPR Art 37 because CleverAide processes health data (Art 9 special category). Can be an employee, consultant, or external DPO service.
+- [ ] Set up pg_cron or Supabase scheduled function to run data-retention-cleanup Edge Function daily. Without this, retention policies exist but are not enforced.

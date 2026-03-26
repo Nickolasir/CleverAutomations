@@ -17,6 +17,12 @@ import type {
   MessageButton,
   InboundMessage,
 } from "@clever/shared";
+import {
+  sanitizeMessageText,
+  sanitizeSenderId,
+  sanitizeId,
+  sanitizeRawPayload,
+} from "@clever/shared";
 
 // ---------------------------------------------------------------------------
 // Configuration
@@ -287,7 +293,7 @@ export class WhatsAppGateway implements MessagingGateway {
     if (!messages?.length) return null;
 
     const msg = messages[0];
-    const from = msg["from"] as string;
+    const from = sanitizeSenderId(msg["from"]);
     const type = msg["type"] as string;
 
     // Text message
@@ -297,9 +303,9 @@ export class WhatsAppGateway implements MessagingGateway {
         channel: "whatsapp",
         sender_id: from,
         sender_name: null,
-        message_text: (textObj?.["body"] as string) ?? "",
+        message_text: sanitizeMessageText(textObj?.["body"]),
         timestamp: new Date().toISOString(),
-        raw_payload: payload,
+        raw_payload: sanitizeRawPayload(payload),
       };
     }
 
@@ -313,10 +319,10 @@ export class WhatsAppGateway implements MessagingGateway {
           sender_id: from,
           sender_name: null,
           message_text: "",
-          button_callback_id: buttonReply["id"] as string,
-          button_callback_payload: buttonReply["title"] as string,
+          button_callback_id: sanitizeId(buttonReply["id"]),
+          button_callback_payload: sanitizeMessageText(buttonReply["title"]),
           timestamp: new Date().toISOString(),
-          raw_payload: payload,
+          raw_payload: sanitizeRawPayload(payload),
         };
       }
     }

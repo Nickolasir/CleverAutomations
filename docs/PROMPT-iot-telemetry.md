@@ -1,13 +1,13 @@
 # Reusable Prompt: IoT Telemetry Local Storage + Cloud Sync
 
-Copy and paste this into a new conversation when working in the CleverAutomations folder.
+Copy and paste this into a new conversation when working in the CleverHub folder.
 
 ---
 
 ## Prompt
 
 ```
-I'm working on the CleverAutomations project (CleverHub smart home system). I need you to implement the IoT telemetry data layer for the Pi hub.
+I'm working on the CleverHub project (CleverHub smart home system). I need you to implement the IoT telemetry data layer for the Pi hub.
 
 ### Context
 - The Pi hub (Raspberry Pi 5, 8GB RAM) collects sensor readings from itself and 4 ESP32-S3 satellite nodes

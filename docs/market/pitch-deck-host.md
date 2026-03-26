@@ -1,6 +1,6 @@
 # CleverHost — Airbnb/STR Host Vertical Pitch Deck Content
 
-**Clever Automations — CleverHost**
+**CleverHub — CleverHost**
 **"Automate Your Guest Experience. Reclaim Your Time."**
 **Last Updated: 2026-02-12**
 
@@ -13,7 +13,7 @@
 
 The smart home platform purpose-built for short-term rental hosts.
 
-Clever Automations | Houston, TX
+CleverHub | Houston, TX
 
 ---
 
@@ -446,7 +446,7 @@ No electrician. No contractor. No drilling. No wiring. If you can replace a dead
 **Contact:**
 [Name], CleverHost
 [Phone] | [Email]
-cleverautomations.com/hosts
+cleverhub.space/hosts
 
 ---
 

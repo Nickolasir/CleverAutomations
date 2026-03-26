@@ -1,5 +1,5 @@
 /**
- * Clever Automations - Realtime Channel Configuration
+ * CleverHub - Realtime Channel Configuration
  *
  * Three tenant-scoped channels for live updates:
  *   1. device_state:{tenant_id}  - Live device state changes
@@ -562,7 +562,7 @@ export async function broadcastShoppingListUpdate(
 }
 
 /**
- * Unsubscribe from all Clever Automations channels.
+ * Unsubscribe from all CleverHub channels.
  * Convenience cleanup function for client teardown.
  */
 export async function unsubscribeAll(

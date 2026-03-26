@@ -8,3 +8,8 @@ export * from "./kitchen.js";
 export * from "./family.js";
 export * from "./aide.js";
 export * from "./messaging.js";
+export * from "./gdpr.js";
+export * from "./email-calendar.js";
+export * from "./biometric-auth.js";
+export * from "./nutrition.js";
+export * from "./communications.js";

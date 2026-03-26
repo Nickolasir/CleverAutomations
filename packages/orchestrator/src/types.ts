@@ -11,6 +11,15 @@ import type {
   UserId,
   TenantId,
   DeviceStateChange,
+  EmailAccountInfo,
+  CalendarAccountInfo,
+  EmailSummary,
+  CalendarEventInfo,
+  DailyNutritionSummary,
+  WeeklyNutritionSummary,
+  NutritionGoals,
+  FoodLogCreateInput,
+  FoodLog,
 } from "@clever/shared";
 
 // ---------------------------------------------------------------------------
@@ -25,7 +34,16 @@ export type TriageCategory =
   | "complex_task"        // Multi-step ("get the house ready for bedtime")
   | "emergency"           // Distress signal ("help! fire!")
   | "wellness_checkin"    // CleverAide: proactive or user-initiated wellness check
-  | "medication_reminder"; // CleverAide: medication reminder/confirmation
+  | "medication_reminder" // CleverAide: medication reminder/confirmation
+  | "email_query"         // Email inbox queries ("do I have new emails?")
+  | "email_command"       // Send/compose email ("send an email to...")
+  | "calendar_query"      // Calendar queries ("what's on my calendar today?")
+  | "calendar_command"    // Create/modify events ("schedule a meeting at 3pm")
+  | "nutrition_log"       // User reporting food/drink intake ("I just had a coffee")
+  | "nutrition_query"     // Asking about nutrition data ("how many calories today?")
+  | "family_message"      // Family messaging ("send an announcement to the family")
+  | "memory_save"         // Explicit memory save ("remember that I like the lights dim")
+  | "memory_manage";      // Memory queries/deletion ("what do you remember?", "forget that")
 
 export interface TriageResult {
   category: TriageCategory;
@@ -59,6 +77,8 @@ export interface OrchestratorRequest {
   family_context?: FamilyVoiceContext;
   /** Pre-parsed intent (Tier 1 rules match already happened). */
   pre_parsed_intent?: ParsedIntent;
+  /** Elevated auth session token (for accessing sensitive data like email/nutrition). */
+  elevated_auth_session?: string;
 }
 
 export interface DeviceAction {
@@ -175,4 +195,56 @@ export interface DeviceStateInfo {
   is_online: boolean;
   attributes: Record<string, unknown>;
   last_changed: string;
+}
+
+// ---------------------------------------------------------------------------
+// Email & Calendar state query interface
+// ---------------------------------------------------------------------------
+
+/**
+ * Interface for querying email/calendar state from HA and the local cache.
+ * Injected by the host environment alongside DeviceStateProvider.
+ */
+export interface EmailCalendarStateProvider {
+  /** Get all linked email accounts for a user. */
+  getEmailAccounts(tenantId: TenantId, userId: UserId): Promise<EmailAccountInfo[]>;
+  /** Get all linked calendar accounts for a user. */
+  getCalendarAccounts(tenantId: TenantId, userId: UserId): Promise<CalendarAccountInfo[]>;
+  /** Get unread email counts per account (keyed by email_account.id). */
+  getUnreadCounts(tenantId: TenantId, userId: UserId): Promise<Record<string, number>>;
+  /** Get cached email summaries for a user (recent, from all accounts). */
+  getRecentEmails(tenantId: TenantId, userId: UserId, limit?: number): Promise<EmailSummary[]>;
+  /** Get upcoming calendar events within the next N hours. */
+  getUpcomingEvents(tenantId: TenantId, userId: UserId, hours?: number): Promise<CalendarEventInfo[]>;
+  /** Check if user requires elevated auth to access email data. */
+  requiresElevatedAuth?(userId: UserId, tenantId: TenantId): Promise<boolean>;
+  /** Check if accessor can view target user's email. */
+  checkEmailAccess?(accessorId: UserId, targetId: UserId, tenantId: TenantId): Promise<{ allowed: boolean; reason?: string }>;
+  /** Send an email on behalf of the user (requires elevated auth + rate limit). */
+  sendEmail?(tenantId: TenantId, userId: UserId, to: string, subject: string, body: string): Promise<{ success: boolean; error?: string }>;
+  /** Get family messages for a user. */
+  getFamilyMessages?(tenantId: TenantId, userId: UserId, limit?: number): Promise<unknown[]>;
+  /** Send a family announcement or private message. */
+  sendFamilyMessage?(tenantId: TenantId, userId: UserId, content: string, recipientId?: UserId): Promise<{ success: boolean; error?: string }>;
+}
+
+// ---------------------------------------------------------------------------
+// Nutrition state provider interface
+// ---------------------------------------------------------------------------
+
+/**
+ * Interface for nutrition tracking data access.
+ * Injected by the host environment for nutrition sub-agent features.
+ */
+export interface NutritionStateProvider {
+  /** Get daily nutrition summary for a user. */
+  getDailySummary(tenantId: TenantId, userId: UserId, date?: string): Promise<DailyNutritionSummary>;
+  /** Get weekly nutrition summary for a user. */
+  getWeeklySummary(tenantId: TenantId, userId: UserId, startDate?: string): Promise<WeeklyNutritionSummary>;
+  /** Get user's nutrition goals. */
+  getGoals(tenantId: TenantId, userId: UserId): Promise<NutritionGoals | null>;
+  /** Log a food entry. */
+  logFood(tenantId: TenantId, userId: UserId, entry: FoodLogCreateInput): Promise<FoodLog>;
+  /** Check if user has active nutrition_data consent. */
+  hasNutritionConsent(userId: UserId): Promise<boolean>;
 }

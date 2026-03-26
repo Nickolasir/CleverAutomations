@@ -1,5 +1,5 @@
 /**
- * Clever Automations — Unified Messaging Webhook
+ * CleverHub — Unified Messaging Webhook
  *
  * Receives incoming messages from Telegram and WhatsApp, validates
  * signatures, identifies the caregiver by chat/phone ID, and routes
@@ -12,6 +12,44 @@
  */
 
 import { createClient } from "@supabase/supabase-js";
+
+// ---------------------------------------------------------------------------
+// Input sanitization (inline for Deno edge function — mirrors @clever/shared)
+// ---------------------------------------------------------------------------
+
+const MAX_MESSAGE_LENGTH = 4096;
+const MAX_ID_LENGTH = 128;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+function sanitizeText(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input
+    .slice(0, MAX_MESSAGE_LENGTH)
+    .replace(/\0/g, "")
+    .replace(/[\x01-\x08\x0B\x0C\x0E-\x1F]/g, "")
+    .trim();
+}
+
+function sanitizeId(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input.slice(0, MAX_ID_LENGTH).trim().replace(/[^a-zA-Z0-9\-_]/g, "");
+}
+
+function validateUUID(input: unknown): string | null {
+  if (typeof input !== "string") return null;
+  const trimmed = input.trim().slice(0, 40);
+  return UUID_REGEX.test(trimmed) ? trimmed : null;
+}
+
+function sanitizeSender(input: unknown): string {
+  if (typeof input !== "string") return "";
+  return input.slice(0, 20).replace(/[^0-9+]/g, "");
+}
+
+function sanitizeUsername(input: unknown): string | null {
+  if (typeof input !== "string" || !input.trim()) return null;
+  return input.slice(0, 64).replace(/[^a-zA-Z0-9_ \-]/g, "").trim() || null;
+}
 
 // ---------------------------------------------------------------------------
 // Edge Function handler
@@ -83,18 +121,18 @@ async function handleTelegramMessage(
   if (message) {
     const from = message["from"] as Record<string, unknown>;
     const chat = message["chat"] as Record<string, unknown>;
-    senderId = String(from["id"]);
-    chatId = String(chat["id"]);
-    text = (message["text"] as string) ?? "";
-    senderUsername = (from["username"] as string) ?? null;
+    senderId = sanitizeSender(String(from["id"]));
+    chatId = sanitizeSender(String(chat["id"]));
+    text = sanitizeText(message["text"]);
+    senderUsername = sanitizeUsername(from["username"]);
   } else if (callbackQuery) {
     const from = callbackQuery["from"] as Record<string, unknown>;
     const cbMessage = callbackQuery["message"] as Record<string, unknown> | undefined;
     const chat = cbMessage?.["chat"] as Record<string, unknown> | undefined;
-    senderId = String(from["id"]);
-    chatId = chat ? String(chat["id"]) : senderId;
-    text = (callbackQuery["data"] as string) ?? "";
-    senderUsername = (from["username"] as string) ?? null;
+    senderId = sanitizeSender(String(from["id"]));
+    chatId = chat ? sanitizeSender(String(chat["id"])) : senderId;
+    text = sanitizeId(callbackQuery["data"]);
+    senderUsername = sanitizeUsername(from["username"]);
     isCallback = true;
   } else {
     return jsonSuccess({ status: "ignored" });
@@ -106,7 +144,8 @@ async function handleTelegramMessage(
   // Handle /start {link_token} — Telegram bot linking flow
   // -----------------------------------------------------------------------
   if (command.startsWith("/start ")) {
-    const linkToken = text.trim().replace(/^\/start\s+/i, "");
+    const rawToken = text.trim().replace(/^\/start\s+/i, "");
+    const linkToken = sanitizeId(rawToken);
     if (linkToken) {
       return handleTelegramLinking(client, linkToken, chatId, senderUsername);
     }
@@ -126,7 +165,8 @@ async function handleTelegramMessage(
   }
 
   if (command.startsWith("/ack")) {
-    const alertId = command.replace("/ack", "").trim();
+    const rawAlertId = command.replace("/ack", "").trim();
+    const alertId = validateUUID(rawAlertId);
     if (alertId) {
       await client
         .from("aide_caregiver_alerts")
@@ -218,7 +258,7 @@ async function handleTelegramLinking(
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         chat_id: chatId,
-        text: "Successfully linked! You will now receive CleverAutomations notifications here.",
+        text: "Successfully linked! You will now receive CleverHub notifications here.",
         parse_mode: "Markdown",
       }),
     });
@@ -248,7 +288,7 @@ async function handleWhatsAppMessage(
   if (!messages?.length) return jsonSuccess({ status: "ignored" });
 
   const msg = messages[0];
-  const from = msg["from"] as string;
+  const from = sanitizeSender(msg["from"]);
   const type = msg["type"] as string;
 
   let text = "";
@@ -256,13 +296,13 @@ async function handleWhatsAppMessage(
 
   if (type === "text") {
     const textObj = msg["text"] as Record<string, unknown>;
-    text = (textObj?.["body"] as string) ?? "";
+    text = sanitizeText(textObj?.["body"]);
   } else if (type === "interactive") {
     const interactive = msg["interactive"] as Record<string, unknown>;
     const buttonReply = interactive?.["button_reply"] as Record<string, unknown>;
     if (buttonReply) {
-      buttonId = buttonReply["id"] as string;
-      text = buttonReply["title"] as string;
+      buttonId = sanitizeId(buttonReply["id"]);
+      text = sanitizeText(buttonReply["title"]);
     }
   }
 
@@ -290,15 +330,17 @@ async function handleWhatsAppMessage(
 
   // Handle button callbacks (alert acknowledgment)
   if (buttonId?.startsWith("ack_")) {
-    const alertId = buttonId.replace("ack_", "");
-    await client
-      .from("aide_caregiver_alerts")
-      .update({
-        acknowledged: true,
-        acknowledged_at: new Date().toISOString(),
-      })
-      .eq("id", alertId);
-    return jsonSuccess({ status: "alert_acknowledged", alert_id: alertId });
+    const alertId = validateUUID(buttonId.replace("ack_", ""));
+    if (alertId) {
+      await client
+        .from("aide_caregiver_alerts")
+        .update({
+          acknowledged: true,
+          acknowledged_at: new Date().toISOString(),
+        })
+        .eq("id", alertId);
+      return jsonSuccess({ status: "alert_acknowledged", alert_id: alertId });
+    }
   }
 
   return jsonSuccess({
