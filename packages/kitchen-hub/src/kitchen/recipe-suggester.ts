@@ -20,8 +20,8 @@ export class RecipeSuggester {
    */
   async suggestFromPantry(): Promise<RecipeSuggestion[]> {
     // 1. Get current pantry items
-    const { data: pantryItems, error: pantryError } = await this.supabase
-      .from("pantry_items")
+    const { data: pantryItems, error: pantryError } = await (this.supabase
+      .from("pantry_items") as any)
       .select("name, quantity, unit, category")
       .eq("tenant_id", this.tenantId as unknown as string)
       .gt("quantity", 0);
@@ -43,7 +43,7 @@ export class RecipeSuggester {
       "recipe-suggest",
       {
         body: {
-          ingredients: pantryItems.map((i) => ({
+          ingredients: pantryItems.map((i: any) => ({
             name: i.name,
             quantity: i.quantity,
             unit: i.unit,

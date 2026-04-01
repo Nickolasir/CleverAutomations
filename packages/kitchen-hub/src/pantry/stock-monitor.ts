@@ -20,8 +20,8 @@ export class StockMonitor {
    */
   async checkAndAutoRestock(): Promise<void> {
     // 1. Get all items with a threshold set
-    const { data: pantryItems, error: pantryError } = await this.supabase
-      .from("pantry_items")
+    const { data: pantryItems, error: pantryError } = await (this.supabase
+      .from("pantry_items") as any)
       .select("id, name, quantity, unit, min_stock_threshold, category")
       .eq("tenant_id", this.tenantId as unknown as string)
       .not("min_stock_threshold", "is", null);
@@ -32,7 +32,7 @@ export class StockMonitor {
     }
 
     const lowItems = (pantryItems ?? []).filter(
-      (i) =>
+      (i: any) =>
         i.min_stock_threshold !== null &&
         i.quantity <= i.min_stock_threshold,
     );
@@ -40,8 +40,8 @@ export class StockMonitor {
     if (lowItems.length === 0) return;
 
     // 2. Check which are already on the shopping list
-    const { data: existingList, error: listError } = await this.supabase
-      .from("shopping_list_items")
+    const { data: existingList, error: listError } = await (this.supabase
+      .from("shopping_list_items") as any)
       .select("name")
       .eq("tenant_id", this.tenantId as unknown as string)
       .eq("checked", false);
@@ -52,17 +52,17 @@ export class StockMonitor {
     }
 
     const existingNames = new Set(
-      (existingList ?? []).map((i) => i.name.toLowerCase()),
+      (existingList ?? []).map((i: any) => i.name.toLowerCase()),
     );
 
     // 3. Add missing items to shopping list
     const toAdd = lowItems.filter(
-      (i) => !existingNames.has(i.name.toLowerCase()),
+      (i: any) => !existingNames.has(i.name.toLowerCase()),
     );
 
     if (toAdd.length === 0) return;
 
-    const inserts = toAdd.map((item) => ({
+    const inserts = toAdd.map((item: any) => ({
       tenant_id: this.tenantId as unknown as string,
       name: item.name,
       quantity: (item.min_stock_threshold ?? 1) - item.quantity + 1,
@@ -74,8 +74,8 @@ export class StockMonitor {
       priority: "normal" as const,
     }));
 
-    const { error: insertError } = await this.supabase
-      .from("shopping_list_items")
+    const { error: insertError } = await (this.supabase
+      .from("shopping_list_items") as any)
       .insert(inserts);
 
     if (insertError) {
@@ -84,7 +84,7 @@ export class StockMonitor {
     }
 
     console.log(
-      `[StockMonitor] Auto-added ${toAdd.length} item(s) to shopping list: ${toAdd.map((i) => i.name).join(", ")}`,
+      `[StockMonitor] Auto-added ${toAdd.length} item(s) to shopping list: ${toAdd.map((i: any) => i.name).join(", ")}`,
     );
   }
 }

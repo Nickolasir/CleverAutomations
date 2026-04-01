@@ -45,8 +45,8 @@ export class ReceiptScanner {
     } = this.supabase.storage.from("kitchen-images").getPublicUrl(filename);
 
     // 4. Create receipt record with pending status
-    const { data: receipt, error: insertError } = await this.supabase
-      .from("receipts")
+    const { data: receipt, error: insertError } = await (this.supabase
+      .from("receipts") as any)
       .insert({
         tenant_id: tenantId as unknown as string,
         image_url: publicUrl,

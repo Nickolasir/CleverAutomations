@@ -30,8 +30,8 @@ export class ShoppingListManager {
   ) {}
 
   async addItem(input: AddShoppingListItemInput): Promise<DbShoppingListItem> {
-    const { data, error } = await this.supabase
-      .from("shopping_list_items")
+    const { data, error } = await (this.supabase
+      .from("shopping_list_items") as any)
       .insert({
         tenant_id: this.tenantId as unknown as string,
         name: input.name,
@@ -52,8 +52,8 @@ export class ShoppingListManager {
   }
 
   async removeItem(itemId: string): Promise<void> {
-    const { error } = await this.supabase
-      .from("shopping_list_items")
+    const { error } = await (this.supabase
+      .from("shopping_list_items") as any)
       .delete()
       .eq("id", itemId)
       .eq("tenant_id", this.tenantId as unknown as string);
@@ -62,8 +62,8 @@ export class ShoppingListManager {
   }
 
   async checkItem(itemId: string): Promise<void> {
-    const { error } = await this.supabase
-      .from("shopping_list_items")
+    const { error } = await (this.supabase
+      .from("shopping_list_items") as any)
       .update({
         checked: true,
         updated_at: new Date().toISOString(),
@@ -75,8 +75,8 @@ export class ShoppingListManager {
   }
 
   async uncheckItem(itemId: string): Promise<void> {
-    const { error } = await this.supabase
-      .from("shopping_list_items")
+    const { error } = await (this.supabase
+      .from("shopping_list_items") as any)
       .update({
         checked: false,
         updated_at: new Date().toISOString(),
@@ -88,8 +88,8 @@ export class ShoppingListManager {
   }
 
   async getUncheckedItems(): Promise<DbShoppingListItem[]> {
-    const { data, error } = await this.supabase
-      .from("shopping_list_items")
+    const { data, error } = await (this.supabase
+      .from("shopping_list_items") as any)
       .select()
       .eq("tenant_id", this.tenantId as unknown as string)
       .eq("checked", false)
@@ -101,8 +101,8 @@ export class ShoppingListManager {
   }
 
   async getAllItems(): Promise<DbShoppingListItem[]> {
-    const { data, error } = await this.supabase
-      .from("shopping_list_items")
+    const { data, error } = await (this.supabase
+      .from("shopping_list_items") as any)
       .select()
       .eq("tenant_id", this.tenantId as unknown as string)
       .order("checked")
@@ -113,8 +113,8 @@ export class ShoppingListManager {
   }
 
   async clearChecked(): Promise<void> {
-    const { error } = await this.supabase
-      .from("shopping_list_items")
+    const { error } = await (this.supabase
+      .from("shopping_list_items") as any)
       .delete()
       .eq("tenant_id", this.tenantId as unknown as string)
       .eq("checked", true);

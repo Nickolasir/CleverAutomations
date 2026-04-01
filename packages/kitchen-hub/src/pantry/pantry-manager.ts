@@ -33,8 +33,8 @@ export class PantryManager {
   ) {}
 
   async addItem(input: AddPantryItemInput): Promise<DbPantryItem> {
-    const { data, error } = await this.supabase
-      .from("pantry_items")
+    const { data, error } = await (this.supabase
+      .from("pantry_items") as any)
       .insert({
         tenant_id: this.tenantId as unknown as string,
         name: input.name,
@@ -58,8 +58,8 @@ export class PantryManager {
   }
 
   async removeItem(itemId: string): Promise<void> {
-    const { error } = await this.supabase
-      .from("pantry_items")
+    const { error } = await (this.supabase
+      .from("pantry_items") as any)
       .delete()
       .eq("id", itemId)
       .eq("tenant_id", this.tenantId as unknown as string);
@@ -68,8 +68,8 @@ export class PantryManager {
   }
 
   async decrementItem(itemId: string, amount: number = 1): Promise<void> {
-    const { data: item, error: fetchError } = await this.supabase
-      .from("pantry_items")
+    const { data: item, error: fetchError } = await (this.supabase
+      .from("pantry_items") as any)
       .select("quantity")
       .eq("id", itemId)
       .eq("tenant_id", this.tenantId as unknown as string)
@@ -81,16 +81,16 @@ export class PantryManager {
     if (newQty <= 0) {
       await this.removeItem(itemId);
     } else {
-      await this.supabase
-        .from("pantry_items")
+      await (this.supabase
+        .from("pantry_items") as any)
         .update({ quantity: newQty, updated_at: new Date().toISOString() })
         .eq("id", itemId);
     }
   }
 
   async findByBarcode(barcode: string): Promise<DbPantryItem | null> {
-    const { data, error } = await this.supabase
-      .from("pantry_items")
+    const { data, error } = await (this.supabase
+      .from("pantry_items") as any)
       .select()
       .eq("tenant_id", this.tenantId as unknown as string)
       .eq("barcode", barcode)
@@ -101,8 +101,8 @@ export class PantryManager {
   }
 
   async findByName(name: string): Promise<DbPantryItem[]> {
-    const { data, error } = await this.supabase
-      .from("pantry_items")
+    const { data, error } = await (this.supabase
+      .from("pantry_items") as any)
       .select()
       .eq("tenant_id", this.tenantId as unknown as string)
       .ilike("name", `%${name}%`);
@@ -112,8 +112,8 @@ export class PantryManager {
   }
 
   async listAll(): Promise<DbPantryItem[]> {
-    const { data, error } = await this.supabase
-      .from("pantry_items")
+    const { data, error } = await (this.supabase
+      .from("pantry_items") as any)
       .select()
       .eq("tenant_id", this.tenantId as unknown as string)
       .order("category")

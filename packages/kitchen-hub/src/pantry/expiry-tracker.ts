@@ -23,8 +23,8 @@ export class ExpiryTracker {
     threeDaysFromNow.setDate(threeDaysFromNow.getDate() + 3);
     const cutoff = threeDaysFromNow.toISOString().split("T")[0]!;
 
-    const { data: expiringItems, error } = await this.supabase
-      .from("pantry_items")
+    const { data: expiringItems, error } = await (this.supabase
+      .from("pantry_items") as any)
       .select("id, name, expiry_date, location, quantity, unit")
       .eq("tenant_id", this.tenantId as unknown as string)
       .not("expiry_date", "is", null)

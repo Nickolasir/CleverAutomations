@@ -47,8 +47,8 @@ export class PantryPhotographer {
     } = this.supabase.storage.from("kitchen-images").getPublicUrl(filename);
 
     // 3. Create analysis record
-    const { data: analysis, error: insertError } = await this.supabase
-      .from("pantry_photo_analyses")
+    const { data: analysis, error: insertError } = await (this.supabase
+      .from("pantry_photo_analyses") as any)
       .insert({
         tenant_id: tenantId as unknown as string,
         image_url: publicUrl,
