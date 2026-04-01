@@ -13,7 +13,7 @@
 import type { LLMClient } from "../llm-client.js";
 import type { ConversationManager } from "../conversation-manager.js";
 import type { ConversationMessage, LLMMessage, LLMProvider } from "../types.js";
-import type { TenantId } from "@clever/shared/src/types/tenant.js";
+import type { TenantId } from "@clever/shared";
 import type { ConversationSummary } from "./types.js";
 import { estimateTokens, getTokenBudget } from "./token-counter.js";
 
