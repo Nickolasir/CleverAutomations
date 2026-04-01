@@ -2,7 +2,8 @@
 
 import { useContext } from "react";
 import { AuthContext } from "@/lib/auth-context";
-import type { User, Tenant, UserRole, TenantId } from "@clever/shared";
+import type { User, Tenant, UserRole, TenantId, UserId } from "@clever/shared";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 /**
  * Auth hook providing the current user, tenant, and role-based helpers.
@@ -12,6 +13,8 @@ interface UseAuthReturn {
   user: User | null;
   tenant: Tenant | null;
   tenantId: TenantId | null;
+  userId: UserId | null;
+  supabase: SupabaseClient;
   role: UserRole | null;
   loading: boolean;
   isAuthenticated: boolean;
@@ -31,7 +34,7 @@ export function useAuth(): UseAuthReturn {
     throw new Error("useAuth must be used within the AuthProvider (RootLayout)");
   }
 
-  const { user, tenant, loading, signOut } = ctx;
+  const { user, tenant, supabase, loading, signOut } = ctx;
   const role = user?.role ?? null;
 
   /** Role hierarchy: owner > admin > manager > resident > guest */
@@ -58,6 +61,8 @@ export function useAuth(): UseAuthReturn {
     user,
     tenant,
     tenantId: user?.tenant_id ?? null,
+    userId: (user?.id as UserId) ?? null,
+    supabase,
     role,
     loading,
     isAuthenticated: !!user,
