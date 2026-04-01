@@ -123,4 +123,5 @@ export const CONSENT_LAWFUL_BASIS: Record<ConsentType, LawfulBasis> = {
   behavioral_monitoring: "legitimate_interests",
   email_data: "consent",
   calendar_data: "consent",
+  nutrition_data: "consent",
 };
