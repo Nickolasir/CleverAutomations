@@ -17,7 +17,8 @@
     "dev": "tsx src/index.ts",
     "deploy:os": "bash src/deploy/os-setup.sh",
     "deploy:ha": "bash src/deploy/ha-install.sh",
-    "deploy:voice": "bash src/deploy/voice-install.sh"
+    "deploy:voice": "bash src/deploy/voice-install.sh",
+    "deploy:pi4b": "bash src/deploy/pi4b-setup.sh"
   },
   "dependencies": {
     "@clever/shared": "*",

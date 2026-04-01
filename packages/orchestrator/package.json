@@ -13,7 +13,7 @@
     "lint": "eslint src/"
   },
   "dependencies": {
-    "@clever/shared": "workspace:*"
+    "@clever/shared": "*"
   },
   "devDependencies": {
     "typescript": "^5.7.0"

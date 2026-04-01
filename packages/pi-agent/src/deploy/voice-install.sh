@@ -75,7 +75,7 @@ log "Configuring ALSA devices..."
 
 ALSA_CONF="/etc/asound.conf"
 cat > "$ALSA_CONF" <<'ALSACONFIG'
-# CleverHub ALSA Configuration
+# Clever Automations ALSA Configuration
 # Input:  ReSpeaker 4-Mic Array (USB)
 # Output: Adafruit I2S 3W Stereo Bonnet
 
@@ -180,11 +180,11 @@ PIPER_MODEL_JSON="$PIPER_MODEL_DIR/en_US-lessac-medium.onnx.json"
 
 if [[ ! -f "$PIPER_MODEL_FILE" ]]; then
   log "Downloading Piper en_US-lessac-medium voice model..."
-  PIPER_RELEASE_URL="https://github.com/rhasspy/piper/releases/download/2023.11.14-2"
+  PIPER_RELEASE_URL="https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/lessac/medium"
   wget -q -O "$PIPER_MODEL_FILE" \
-    "${PIPER_RELEASE_URL}/voice-en_US-lessac-medium.onnx"
+    "${PIPER_RELEASE_URL}/en_US-lessac-medium.onnx"
   wget -q -O "$PIPER_MODEL_JSON" \
-    "${PIPER_RELEASE_URL}/voice-en_US-lessac-medium.onnx.json"
+    "${PIPER_RELEASE_URL}/en_US-lessac-medium.onnx.json"
   log "Piper voice model downloaded."
 else
   log "Piper voice model already exists."
@@ -250,7 +250,7 @@ log "Creating systemd service for clever-voice..."
 
 cat > /etc/systemd/system/clever-voice.service <<EOF
 [Unit]
-Description=CleverHub Voice Pipeline
+Description=Clever Automations Voice Pipeline
 After=network-online.target clever-agent.service
 Wants=network-online.target
 BindsTo=clever-agent.service
@@ -288,7 +288,7 @@ EOF
 # Create systemd service for llama.cpp server (local LLM)
 cat > /etc/systemd/system/clever-llm.service <<EOF
 [Unit]
-Description=CleverHub Local LLM (llama.cpp)
+Description=Clever Automations Local LLM (llama.cpp)
 After=network.target
 
 [Service]
