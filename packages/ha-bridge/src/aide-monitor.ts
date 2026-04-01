@@ -226,7 +226,7 @@ export class AideMonitor {
       // Common HA pattern: "Living Room Motion"
       const name = attrs["friendly_name"] as string;
       const roomMatch = name.match(/^(.+?)\s+(motion|door|sensor)/i);
-      if (roomMatch) return roomMatch[1];
+      if (roomMatch?.[1]) return roomMatch[1];
     }
     return "unknown";
   }
