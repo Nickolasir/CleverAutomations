@@ -64,8 +64,7 @@ export async function checkinCronTick(config: CheckinCronConfig): Promise<void> 
   const { supabase, tenantId } = config;
 
   // Get all aide profiles
-  const { data: aideProfiles } = await supabase
-    .from("aide_profiles")
+  const { data: aideProfiles } = await (supabase.from("aide_profiles") as any)
     .select("id, profile_id, timezone, cognitive_level")
     .eq("tenant_id", tenantId);
 
@@ -115,7 +114,7 @@ async function runCheckin(
   const greeting = CHECKIN_GREETINGS[checkinType] ?? CHECKIN_GREETINGS.morning;
 
   // Step 1: Greet and ask how they're feeling
-  await config.speak("default", greeting);
+  await config.speak("default", greeting!);
   const response1 = await config.listenForResponse("default", timeout);
 
   if (!response1) {
@@ -125,7 +124,7 @@ async function runCheckin(
 
     if (!response2) {
       // Still no response — record and alert
-      await supabase.from("aide_wellness_checkins").insert({
+      await (supabase.from("aide_wellness_checkins") as any).insert({
         tenant_id: tenantId,
         aide_profile_id: aideProfileId,
         checkin_type: checkinType,
@@ -163,7 +162,7 @@ async function processResponse(
 
   // Check for emergency keywords first
   if (EMERGENCY_KEYWORDS.test(transcript)) {
-    await supabase.from("aide_wellness_checkins").insert({
+    await (supabase.from("aide_wellness_checkins") as any).insert({
       tenant_id: tenantId,
       aide_profile_id: aideProfileId,
       checkin_type: checkinType,
@@ -206,7 +205,7 @@ async function processResponse(
       // Try to extract a number
       const numMatch = painResponse.match(/\b(\d+)\b/);
       if (numMatch) {
-        painLevel = Math.min(parseInt(numMatch[1], 10), 10);
+        painLevel = Math.min(parseInt(numMatch[1]!, 10), 10);
         if (painLevel >= 7) {
           flagged = true;
           notes += ` High pain level: ${painLevel}/10.`;
@@ -228,7 +227,7 @@ async function processResponse(
   // Record the check-in
   const status = flagged ? "concern_flagged" : "completed";
 
-  await supabase.from("aide_wellness_checkins").insert({
+  await (supabase.from("aide_wellness_checkins") as any).insert({
     tenant_id: tenantId,
     aide_profile_id: aideProfileId,
     checkin_type: checkinType,

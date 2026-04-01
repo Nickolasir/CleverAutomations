@@ -50,8 +50,7 @@ export async function medicationCronTick(config: MedicationCronConfig): Promise<
   const lookAhead = config.lookAheadMinutes ?? 5;
 
   // 1. Get all active aide profiles in this tenant
-  const { data: aideProfiles } = await supabase
-    .from("aide_profiles")
+  const { data: aideProfiles } = await (supabase.from("aide_profiles") as any)
     .select("id, profile_id, timezone")
     .eq("tenant_id", tenantId);
 
@@ -59,8 +58,7 @@ export async function medicationCronTick(config: MedicationCronConfig): Promise<
 
   for (const profile of aideProfiles) {
     // 2. Get active medications for this profile
-    const { data: medications } = await supabase
-      .from("aide_medications")
+    const { data: medications } = await (supabase.from("aide_medications") as any)
       .select("*")
       .eq("aide_profile_id", profile.id)
       .eq("is_active", true);
@@ -92,8 +90,7 @@ export async function medicationCronTick(config: MedicationCronConfig): Promise<
           const scheduledAt = new Date(localNow);
           scheduledAt.setHours(h ?? 0, m ?? 0, 0, 0);
 
-          const { data: existingLog } = await supabase
-            .from("aide_medication_logs")
+          const { data: existingLog } = await (supabase.from("aide_medication_logs") as any)
             .select("id")
             .eq("medication_id", med.id)
             .eq("scheduled_at", scheduledAt.toISOString())
@@ -102,8 +99,7 @@ export async function medicationCronTick(config: MedicationCronConfig): Promise<
           if (existingLog?.length) continue;
 
           // 4. Create pending log entry
-          await supabase
-            .from("aide_medication_logs")
+          await (supabase.from("aide_medication_logs") as any)
             .insert({
               tenant_id: tenantId,
               medication_id: med.id,
@@ -145,8 +141,7 @@ async function triggerReminder(
     await config.speak("default", reminderText);
 
     // Update log to "reminded"
-    await supabase
-      .from("aide_medication_logs")
+    await (supabase.from("aide_medication_logs") as any)
       .update({ status: "reminded" })
       .eq("medication_id", med.id)
       .eq("scheduled_at", scheduledAt.toISOString())
@@ -161,8 +156,7 @@ async function triggerReminder(
       const skipped = /\b(skip|later|not now|no)\b/.test(lower);
 
       if (taken) {
-        await supabase
-          .from("aide_medication_logs")
+        await (supabase.from("aide_medication_logs") as any)
           .update({
             status: "taken",
             confirmed_via: "voice",
@@ -173,8 +167,7 @@ async function triggerReminder(
 
         await config.speak("default", `Great, I've noted that you took your ${med.medication_name}.`);
       } else if (skipped) {
-        await supabase
-          .from("aide_medication_logs")
+        await (supabase.from("aide_medication_logs") as any)
           .update({
             status: "skipped",
             confirmed_via: "voice",
@@ -206,8 +199,7 @@ async function triggerReminder(
       const secondResponse = await config.listenForResponse("default", 60_000);
 
       if (secondResponse && /\b(took|taken|done|yes|i did)\b/.test(secondResponse.toLowerCase())) {
-        await supabase
-          .from("aide_medication_logs")
+        await (supabase.from("aide_medication_logs") as any)
           .update({
             status: "taken",
             confirmed_via: "voice",
@@ -217,8 +209,7 @@ async function triggerReminder(
           .eq("scheduled_at", scheduledAt.toISOString());
       } else {
         // Mark as missed and alert caregiver
-        await supabase
-          .from("aide_medication_logs")
+        await (supabase.from("aide_medication_logs") as any)
           .update({
             status: "missed",
             confirmed_via: "auto_timeout",

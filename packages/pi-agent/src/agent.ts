@@ -429,7 +429,7 @@ export class PiAgent {
       llm: llmClient,
       agentManager,
       conversationManager,
-      commandExecutor: this.commandExecutor,
+      commandExecutor: this.commandExecutor as any,
       deviceStateProvider,
       tenantId: this.config.tenantId,
     });
@@ -1027,7 +1027,7 @@ export class PiAgent {
     }
     this.isRunning = true;
 
-    console.log("[PiAgent] Starting CleverHub Pi Agent...");
+    console.log("[PiAgent] Starting Clever Automations Pi Agent...");
     console.log(`[PiAgent] Device ID: ${this.config.deviceId}`);
     console.log(`[PiAgent] Tenant:    ${this.config.tenantId as string}`);
 

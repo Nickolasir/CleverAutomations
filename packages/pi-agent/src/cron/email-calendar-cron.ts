@@ -49,8 +49,7 @@ export async function emailDigestTick(config: EmailCalendarCronConfig): Promise<
   const { supabase, tenantId } = config;
 
   // 1. Get all users with email digest enabled
-  const { data: prefs } = await supabase
-    .from("email_calendar_notification_prefs")
+  const { data: prefs } = await (supabase.from("email_calendar_notification_prefs") as any)
     .select("user_id, email_digest_time, preferred_channels")
     .eq("tenant_id", tenantId)
     .eq("email_digest_enabled", true);
@@ -70,8 +69,7 @@ export async function emailDigestTick(config: EmailCalendarCronConfig): Promise<
     sentDigests.add(digestKey);
 
     // 2. Get user's email accounts
-    const { data: accounts } = await supabase
-      .from("email_accounts")
+    const { data: accounts } = await (supabase.from("email_accounts") as any)
       .select("id, display_name_encrypted, ha_inbox_entity_id, provider")
       .eq("tenant_id", tenantId)
       .eq("user_id", pref.user_id)
@@ -100,13 +98,12 @@ export async function emailDigestTick(config: EmailCalendarCronConfig): Promise<
     if (totalUnread === 0) continue; // Nothing to report
 
     // 4. Get recent cached emails for summary
-    const { data: recentEmails } = await supabase
-      .from("email_cache")
+    const { data: recentEmails } = await (supabase.from("email_cache") as any)
       .select("subject_encrypted, sender_encrypted, is_important")
       .eq("tenant_id", tenantId)
       .in(
         "email_account_id",
-        accounts.map((a) => a.id),
+        accounts.map((a: any) => a.id),
       )
       .eq("is_read", false)
       .order("received_at", { ascending: false })
@@ -144,8 +141,7 @@ export async function calendarReminderTick(config: EmailCalendarCronConfig): Pro
   const { supabase, tenantId } = config;
 
   // 1. Get all users with calendar reminder preferences
-  const { data: prefs } = await supabase
-    .from("email_calendar_notification_prefs")
+  const { data: prefs } = await (supabase.from("email_calendar_notification_prefs") as any)
     .select("user_id, calendar_reminder_minutes, preferred_channels")
     .eq("tenant_id", tenantId);
 
@@ -160,8 +156,7 @@ export async function calendarReminderTick(config: EmailCalendarCronConfig): Pro
     const windowStart = now.toISOString();
     const windowEnd = new Date(now.getTime() + reminderMinutes * 60_000).toISOString();
 
-    const { data: events } = await supabase
-      .from("calendar_event_cache")
+    const { data: events } = await (supabase.from("calendar_event_cache") as any)
       .select(`
         id, summary_encrypted, location_encrypted, start_time, end_time, is_all_day,
         calendar_account_id,
@@ -207,8 +202,7 @@ export async function eventAutomationTick(config: EmailCalendarCronConfig): Prom
   const { supabase, tenantId } = config;
 
   // 1. Get all active alert rules
-  const { data: rules } = await supabase
-    .from("email_calendar_alert_rules")
+  const { data: rules } = await (supabase.from("email_calendar_alert_rules") as any)
     .select("*")
     .eq("tenant_id", tenantId)
     .eq("is_active", true);
@@ -224,8 +218,7 @@ export async function eventAutomationTick(config: EmailCalendarCronConfig): Prom
         const windowStart = new Date(now.getTime() - 30_000).toISOString();
         const windowEnd = new Date(now.getTime() + 30_000).toISOString();
 
-        const { data: startingEvents } = await supabase
-          .from("calendar_event_cache")
+        const { data: startingEvents } = await (supabase.from("calendar_event_cache") as any)
           .select("id, summary_encrypted, calendar_account_id, calendar_accounts!inner(user_id)")
           .eq("calendar_accounts.user_id", rule.user_id)
           .gte("start_time", windowStart)
@@ -243,8 +236,7 @@ export async function eventAutomationTick(config: EmailCalendarCronConfig): Prom
         const threshold = rule.conditions.unread_threshold ?? 10;
 
         // Get user's email accounts
-        const { data: accounts } = await supabase
-          .from("email_accounts")
+        const { data: accounts } = await (supabase.from("email_accounts") as any)
           .select("ha_inbox_entity_id")
           .eq("tenant_id", tenantId)
           .eq("user_id", rule.user_id)
