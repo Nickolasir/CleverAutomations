@@ -1180,7 +1180,7 @@ export class CleverOrchestrator {
     if (calendarIntent && calendarIntent.action === "create") {
       // Use the primary calendar, or the first one
       const targetCalendar =
-        calendarAccounts.find((c) => c.is_primary) ?? calendarAccounts[0];
+        calendarAccounts.find((c) => c.is_primary) ?? calendarAccounts[0]!;
 
       const event: HACalendarEventCreate = {
         entity_id: targetCalendar.ha_entity_id,
