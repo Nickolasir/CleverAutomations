@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .maybeSingle();
 
           if (!profile) {
-            if (pathname.startsWith("/dashboard")) {
+            if (pathname?.startsWith("/dashboard")) {
               router.replace("/auth/onboarding");
             }
             return;
