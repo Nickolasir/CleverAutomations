@@ -8,7 +8,7 @@ import { createBrowserClient } from "@/lib/supabase/client";
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirect") ?? "/dashboard";
+  const redirectTo = searchParams?.get("redirect") ?? "/dashboard";
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -50,7 +50,7 @@ function LoginForm() {
             CA
           </div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Sign in to CleverHub
+            Sign in to Clever Automations
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             AI-powered smart home management

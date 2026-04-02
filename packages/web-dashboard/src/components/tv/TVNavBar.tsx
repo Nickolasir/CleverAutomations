@@ -55,7 +55,7 @@ export function TVNavBar() {
           const isActive =
             item.href === "/tv"
               ? pathname === "/tv"
-              : pathname.startsWith(item.href);
+              : pathname?.startsWith(item.href) ?? false;
 
           return (
             <Link
