@@ -20,8 +20,6 @@
     }
   },
   "dependencies": {
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
     "scheduler": "0.24.0-canary-efb381bbf-20230505"
   },
   "devDependencies": {
