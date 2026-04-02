@@ -21,6 +21,8 @@ const CATEGORY_ICONS: Record<DeviceCategory, string> = {
   media_player: "🎵",
   climate: "❄️",
   fan: "🌀",
+  calendar: "📅",
+  email_sensor: "📧",
 };
 
 /** State-to-display color mapping */
