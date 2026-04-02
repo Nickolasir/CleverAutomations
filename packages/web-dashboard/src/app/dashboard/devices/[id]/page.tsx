@@ -29,7 +29,7 @@ export default function DeviceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const deviceId = params.id as unknown as DeviceId;
+  const deviceId = params?.id as unknown as DeviceId;
 
   /** Fetch device, state history, and command log */
   const fetchDeviceData = useCallback(async () => {
