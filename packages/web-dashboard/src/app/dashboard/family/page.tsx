@@ -419,7 +419,7 @@ export default function FamilyPage() {
     try {
       const { data, error: fetchErr } = await supabase
         .from("family_member_profiles")
-        .select("*, users(display_name, email)")
+        .select("*, users!family_member_profiles_user_id_fkey(display_name, email)")
         .eq("tenant_id", tenantId as string)
         .order("created_at", { ascending: false });
 

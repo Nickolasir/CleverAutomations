@@ -192,7 +192,7 @@ function FamilyActivitySection({ tenantId }: { tenantId: string | null }) {
     if (!tenantId) return;
     const { data } = await supabase
       .from("family_member_profiles")
-      .select("id, agent_name, age_group, is_active, users!inner(display_name)")
+      .select("id, agent_name, age_group, is_active, users!family_member_profiles_user_id_fkey!inner(display_name)")
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
       .limit(6);
