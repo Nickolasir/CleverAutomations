@@ -4,7 +4,7 @@ import { AuthProvider } from "./auth-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Clever Automations Dashboard",
+  title: "CleverHub Dashboard",
   description: "AI-powered smart home management dashboard",
 };
 

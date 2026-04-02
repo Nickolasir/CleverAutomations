@@ -47,10 +47,10 @@ function LoginForm() {
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-brand-600 text-2xl font-bold text-white">
-            CA
+            CH
           </div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Sign in to Clever Automations
+            Sign in to CleverHub
           </h1>
           <p className="mt-2 text-sm text-slate-500">
             AI-powered smart home management
