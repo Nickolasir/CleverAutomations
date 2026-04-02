@@ -428,17 +428,12 @@ export default function FamilyPage() {
         return;
       }
 
-      // Fetch decrypted user info separately (FK join doesn't work through encrypted columns)
-      const userIds = (profiles ?? []).map((p: Record<string, unknown>) => p.user_id).filter(Boolean);
+      // Fetch decrypted user info via RPC (encrypted columns can't be read directly)
+      const { data: users } = await supabase
+        .rpc("get_tenant_users", { p_tenant_id: tenantId });
       let userMap: Record<string, { display_name: string; email: string }> = {};
-      if (userIds.length > 0) {
-        const { data: users } = await supabase
-          .from("users_decrypted")
-          .select("id, display_name, email")
-          .in("id", userIds);
-        if (users) {
-          userMap = Object.fromEntries(users.map((u: Record<string, unknown>) => [u.id, u]));
-        }
+      if (users) {
+        userMap = Object.fromEntries(users.map((u: Record<string, unknown>) => [u.id, u]));
       }
 
       const merged = (profiles ?? []).map((p: Record<string, unknown>) => ({
@@ -456,10 +451,7 @@ export default function FamilyPage() {
     if (!tenantId) return;
     try {
       const { data } = await supabase
-        .from("users_decrypted")
-        .select("id, display_name, email")
-        .eq("tenant_id", tenantId as string)
-        .order("display_name");
+        .rpc("get_tenant_users", { p_tenant_id: tenantId });
 
       setTenantUsers((data as unknown as UserBasic[]) ?? []);
     } catch {

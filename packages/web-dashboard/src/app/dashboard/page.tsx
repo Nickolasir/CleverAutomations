@@ -198,16 +198,11 @@ function FamilyActivitySection({ tenantId }: { tenantId: string | null }) {
       .limit(6);
 
     if (profiles) {
-      const userIds = profiles.map((p: any) => p.user_id).filter(Boolean);
+      const { data: users } = await supabase
+        .rpc("get_tenant_users", { p_tenant_id: tenantId });
       let userMap: Record<string, string> = {};
-      if (userIds.length > 0) {
-        const { data: users } = await supabase
-          .from("users_decrypted")
-          .select("id, display_name")
-          .in("id", userIds);
-        if (users) {
-          userMap = Object.fromEntries(users.map((u: any) => [u.id, u.display_name]));
-        }
+      if (users) {
+        userMap = Object.fromEntries(users.map((u: any) => [u.id, u.display_name]));
       }
       setMembers(profiles.map((m: any) => ({
         id: m.id,

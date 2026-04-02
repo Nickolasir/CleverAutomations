@@ -30,10 +30,7 @@ export default function UsersPage() {
 
     try {
       const { data, error: fetchError } = await supabase
-        .from("users_decrypted")
-        .select("*")
-        .eq("tenant_id", tenantId as string)
-        .order("created_at", { ascending: false });
+        .rpc("get_tenant_users", { p_tenant_id: tenantId });
 
       if (fetchError) {
         setError(fetchError.message);

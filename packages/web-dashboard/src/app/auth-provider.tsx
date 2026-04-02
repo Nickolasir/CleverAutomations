@@ -36,11 +36,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } = await supabase.auth.getSession();
 
         if (session?.user) {
-          const { data: profile } = await supabase
-            .from("users_decrypted")
-            .select("*")
-            .eq("id", session.user.id as unknown as UserId)
-            .maybeSingle();
+          const { data: profileArr } = await supabase
+            .rpc("get_user_profile", { p_user_id: session.user.id });
+          const profile = profileArr?.[0] ?? null;
 
           if (!profile) {
             if (pathname?.startsWith("/dashboard")) {
