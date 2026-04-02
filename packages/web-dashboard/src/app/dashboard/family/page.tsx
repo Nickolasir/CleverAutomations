@@ -417,9 +417,9 @@ export default function FamilyPage() {
   const fetchMembers = useCallback(async () => {
     if (!tenantId) return;
     try {
-      const { data, error: fetchErr } = await supabase
+      const { data: profiles, error: fetchErr } = await supabase
         .from("family_member_profiles")
-        .select("*, users!family_member_profiles_user_id_fkey(display_name, email)")
+        .select("*")
         .eq("tenant_id", tenantId as string)
         .order("created_at", { ascending: false });
 
@@ -427,7 +427,26 @@ export default function FamilyPage() {
         setError(fetchErr.message);
         return;
       }
-      setMembers((data as unknown as MemberWithUser[]) ?? []);
+
+      // Fetch decrypted user info separately (FK join doesn't work through encrypted columns)
+      const userIds = (profiles ?? []).map((p: Record<string, unknown>) => p.user_id).filter(Boolean);
+      let userMap: Record<string, { display_name: string; email: string }> = {};
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from("users_decrypted")
+          .select("id, display_name, email")
+          .in("id", userIds);
+        if (users) {
+          userMap = Object.fromEntries(users.map((u: Record<string, unknown>) => [u.id, u]));
+        }
+      }
+
+      const merged = (profiles ?? []).map((p: Record<string, unknown>) => ({
+        ...p,
+        users: userMap[p.user_id as string] ?? null,
+      }));
+
+      setMembers(merged as unknown as MemberWithUser[]);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to fetch family members");
     }
@@ -437,7 +456,7 @@ export default function FamilyPage() {
     if (!tenantId) return;
     try {
       const { data } = await supabase
-        .from("users")
+        .from("users_decrypted")
         .select("id, display_name, email")
         .eq("tenant_id", tenantId as string)
         .order("display_name");

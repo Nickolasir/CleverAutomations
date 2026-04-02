@@ -190,20 +190,31 @@ function FamilyActivitySection({ tenantId }: { tenantId: string | null }) {
 
   const fetchFamily = useCallback(async () => {
     if (!tenantId) return;
-    const { data } = await supabase
+    const { data: profiles } = await supabase
       .from("family_member_profiles")
-      .select("id, agent_name, age_group, is_active, users!family_member_profiles_user_id_fkey!inner(display_name)")
+      .select("id, agent_name, age_group, is_active, user_id")
       .eq("tenant_id", tenantId)
       .eq("is_active", true)
       .limit(6);
 
-    if (data) {
-      setMembers(data.map((m: any) => ({
+    if (profiles) {
+      const userIds = profiles.map((p: any) => p.user_id).filter(Boolean);
+      let userMap: Record<string, string> = {};
+      if (userIds.length > 0) {
+        const { data: users } = await supabase
+          .from("users_decrypted")
+          .select("id, display_name")
+          .in("id", userIds);
+        if (users) {
+          userMap = Object.fromEntries(users.map((u: any) => [u.id, u.display_name]));
+        }
+      }
+      setMembers(profiles.map((m: any) => ({
         id: m.id,
         agent_name: m.agent_name,
         age_group: m.age_group,
         is_active: m.is_active,
-        display_name: m.users?.display_name,
+        display_name: userMap[m.user_id] ?? m.agent_name,
       })));
     }
 

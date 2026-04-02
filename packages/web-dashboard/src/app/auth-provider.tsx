@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
         if (session?.user) {
           const { data: profile } = await supabase
-            .from("users")
+            .from("users_decrypted")
             .select("*")
             .eq("id", session.user.id as unknown as UserId)
             .maybeSingle();
