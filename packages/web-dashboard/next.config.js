@@ -48,7 +48,7 @@ const nextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://*.supabase.co",
               "font-src 'self'",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co http://10.0.0.44:54321 http://10.0.0.108:54321 http://127.0.0.1:54321 ws://10.0.0.44:54321 ws://10.0.0.108:54321 ws://127.0.0.1:54321",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
