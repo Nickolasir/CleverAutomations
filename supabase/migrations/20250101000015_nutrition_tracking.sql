@@ -384,14 +384,20 @@ BEGIN
 END;
 $$;
 
--- Check if user has active nutrition_data consent
+-- Check if user has active nutrition_data consent.
+-- Uses plpgsql with text-to-enum cast so the 'nutrition_data' literal is
+-- resolved at CALL TIME, not at CREATE FUNCTION time. This avoids the
+-- PostgreSQL restriction that new enum values added via ALTER TYPE ... ADD VALUE
+-- cannot be referenced in the same session until committed.
 CREATE OR REPLACE FUNCTION public.check_nutrition_consent(p_user_id UUID)
 RETURNS BOOLEAN
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 AS $$
-  SELECT has_active_consent(p_user_id, 'nutrition_data');
+BEGIN
+  RETURN has_active_consent(p_user_id, 'nutrition_data'::text::consent_type);
+END;
 $$;
 
 -- ===========================================================================
