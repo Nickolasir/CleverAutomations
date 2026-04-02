@@ -15,7 +15,10 @@
     "security-test": "turbo run security-test"
   },
   "overrides": {
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
     "react-native": {
+      "react": "19.1.0",
       "scheduler": "$scheduler"
     }
   },
