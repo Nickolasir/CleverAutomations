@@ -315,6 +315,108 @@ Home Assistant: https://developers.home-assistant.io/docs/api/rest
 OpenRouter: https://openrouter.ai/docs (non-voice path only)
 OpenClaw: https://github.com/openclaw/openclaw
 
+Deployment & Operations
+
+Pi 4B Deployment (Current Setup)
+The system runs on a Raspberry Pi 4B at 10.0.0.108 with Home Assistant Core in Docker + hosted Supabase.
+
+Services:
+- homeassistant-docker.service: HA container (Docker Compose at /opt/clever/ha-compose/)
+- clever-web.service: Next.js standalone dashboard on port 3000
+- matter-server: Docker container for Matter protocol (ws://10.0.0.108:5580/ws)
+- Supabase: Hosted at https://xwocvhfkqsvbabjrlfjx.supabase.co (NOT local)
+
+Key Files on Pi:
+- /opt/clever/clever-agent/.env — Main env file (not in git, must be created manually on Pi)
+- /opt/clever/clever-agent/packages/web-dashboard/.env.local — Dashboard env (not in git)
+- /opt/clever/ha-data/configuration.yaml — HA config
+- /opt/clever/ha-compose/docker-compose.yml — HA Docker Compose
+
+Deploy Script:
+Run `sudo bash packages/pi-agent/src/deploy/cleverhub-deploy.sh` on the Pi after pushing code.
+This does: git pull → build → copy static assets → restart dashboard → device sync.
+
+Boot Orchestrator:
+`packages/pi-agent/src/deploy/cleverhub-boot.sh` starts all services in order on boot.
+Install: `sudo cp packages/pi-agent/src/deploy/cleverhub.service /etc/systemd/system/ && sudo systemctl enable cleverhub`
+
+Known Issues & Solutions
+
+Next.js Standalone Static Assets:
+The standalone output doesn't include static files. After every build, copy them:
+  cp -r .next/static .next/standalone/packages/web-dashboard/.next/static
+  cp -r public .next/standalone/packages/web-dashboard/public
+The deploy script handles this automatically.
+
+NEXT_PUBLIC_ Env Vars Are Baked at Build Time:
+Changing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_HA_URL requires a full rebuild.
+Simply restarting the service is NOT enough. The deploy script handles this.
+
+Content Security Policy (CSP):
+The CSP in next.config.js must include all Supabase and HA URLs the browser connects to.
+For hosted Supabase: https://*.supabase.co and wss://*.supabase.co are already included.
+For local HA: http://10.0.0.108:8123 was added. Update if the Pi IP changes.
+
+PII Encryption — Encrypted Column Names:
+Migration 010 renames users.display_name → display_name_encrypted, users.email → email_encrypted.
+Frontend CANNOT read these directly. Use RPC functions instead:
+  - get_user_profile(p_user_id UUID) — returns decrypted user profile
+  - get_tenant_users(p_tenant_id UUID) — returns all decrypted users for a tenant
+Never query .from("users").select("display_name") — it doesn't exist. Use the RPCs.
+
+PostgREST FK Disambiguation:
+When a table has multiple FKs to the same table, PostgREST can't auto-resolve joins.
+Example: family_member_profiles has user_id and managed_by both referencing users.
+Fix: specify the FK name in the select: `users!family_member_profiles_user_id_fkey(...)`.
+Better: avoid FK joins on encrypted tables entirely — use separate RPC queries.
+
+RLS Policies Using requesting_tenant_id():
+This function reads tenant_id from JWT claims: `(auth.jwt()->>'tenant_id')::uuid`.
+Supabase auth JWTs do NOT include tenant_id by default. Policies that depend on it will fail.
+Workaround policies were added:
+  - devices_select_authenticated: uses `tenant_id IN (SELECT tenant_id FROM users WHERE id = auth.uid())`
+  - tenants_select_authenticated: USING (true) for any authenticated user
+TODO: Add tenant_id to JWT claims via Supabase auth hook for proper RLS.
+
+Device Sync (HA → Supabase):
+Run `node packages/pi-agent/dist/deploy/device-sync.js` with env vars exported.
+Must use `set -a && source .env && set +a` before running (plain `source` doesn't export).
+Device IDs from HA are entity_id strings, not UUIDs — the sync script omits them and lets Supabase auto-generate.
+Sync uses the service_role key (bypasses RLS) so SUPABASE_SERVICE_ROLE_KEY must be in .env.
+
+HA Configuration (Core, not OS):
+Running HA Core in Docker — does NOT include add-ons, mobile app, or discovery by default.
+Add `default_config:` to configuration.yaml to enable ~30 integrations at once:
+  auto-discovery, mobile_app, ssdp, zeroconf, dhcp, Matter support, etc.
+HA config is at /opt/clever/ha-data/configuration.yaml.
+Restart HA after config changes: `sudo systemctl restart homeassistant-docker`
+
+Matter Integration:
+Requires a separate Matter Server container (not included in HA Core).
+Start: `docker run -d --name matter-server --restart unless-stopped --network host -v /opt/clever/matter-data:/data ghcr.io/home-assistant-libs/python-matter-server:stable --storage-path /data`
+In HA, configure Matter with URL: ws://10.0.0.108:5580/ws (NOT localhost).
+
+Pi IP Address:
+The Pi is at 10.0.0.108 (was previously 10.0.0.44 which is no longer valid).
+If the IP changes via DHCP, ALL of these must be updated:
+  - .env (HA_URL)
+  - packages/web-dashboard/.env.local (NEXT_PUBLIC_HA_URL)
+  - packages/mobile-app/.env (EXPO_PUBLIC_HA_URL)
+  - next.config.js CSP connect-src
+Consider setting a static IP or using mDNS (cleverpi.local) instead.
+
+Disk Space on Pi 4B:
+The 32GB SD card fills up fast with Docker images. Run `sudo docker system prune -a --volumes` periodically.
+Consider upgrading to 64GB+ SD card or USB SSD for more headroom.
+
+Duplicate Tenants:
+There are two tenants named "15610 Harmony Terrace". The active one is ae594d71-0f43-4b77-baa1-62fd20403271.
+The other (fe1436ae) can be cleaned up later.
+
+Turbo Build Cache:
+If config changes aren't reflected after build, the turbo cache may be stale.
+Force clean: `sudo rm -rf packages/web-dashboard/.next .turbo && sudo npm run build`
+
 GDPR Pre-Production Checklist (DAILY REMINDER — incomplete items)
 The following items MUST be completed before production deployment. Remind the user about these at the start of every conversation until all are checked off.
 
