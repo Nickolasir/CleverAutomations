@@ -14,9 +14,8 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { Device, DeviceId, TenantId } from "@clever/shared";
-import { HARestClient, entityIdToCategory } from "../../ha-bridge/src/rest-client.js";
-import { DeviceDiscovery } from "../../ha-bridge/src/device-discovery.js";
-import type { DeviceStore } from "../../ha-bridge/src/device-discovery.js";
+import { HARestClient, DeviceDiscovery } from "@clever/ha-bridge";
+import type { DeviceStore } from "@clever/ha-bridge";
 
 // ---------------------------------------------------------------------------
 // Env validation
