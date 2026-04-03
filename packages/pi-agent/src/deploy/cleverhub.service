@@ -1,0 +1,18 @@
+[Unit]
+Description=CleverHub Boot Orchestrator
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/bash /opt/clever/clever-agent/packages/pi-agent/src/deploy/cleverhub-boot.sh
+ExecStop=/usr/bin/bash -c "systemctl stop clever-web 2>/dev/null; docker stop matter-server 2>/dev/null; docker compose -f /opt/clever/ha-compose/docker-compose.yml down 2>/dev/null"
+TimeoutStartSec=300
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=cleverhub
+
+[Install]
+WantedBy=multi-user.target
