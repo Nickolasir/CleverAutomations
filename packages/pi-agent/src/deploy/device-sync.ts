@@ -63,8 +63,7 @@ const store: DeviceStore = {
   },
 
   async upsertDevice(device: Device): Promise<void> {
-    const record = {
-      id: device.id,
+    const record: Record<string, unknown> = {
       tenant_id: TENANT_ID as string,
       ha_entity_id: device.ha_entity_id,
       name: device.name,
@@ -76,6 +75,12 @@ const store: DeviceStore = {
       is_online: device.is_online,
       last_seen: new Date().toISOString(),
     };
+
+    // Only include id if it's a valid UUID (existing device from DB)
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (device.id && uuidRegex.test(device.id as string)) {
+      record.id = device.id;
+    }
 
     const { error } = await supabase
       .from("devices")
