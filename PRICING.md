@@ -1,10 +1,74 @@
-# CleverHub Standard System — Bill of Materials & Ordering Guide
+# CleverHub Bill of Materials & Ordering Guide
 
-**Retail Price: $2,500.00** (one-time) + $100/mo cloud AI features
+Two product tiers with different compute cores. Satellite nodes are identical across both tiers.
 
 ---
 
-## Main Hub
+# CleverHub Apartment — $1,899.00 (one-time) + $100/mo cloud AI features
+
+Internet-only voice processing. No local AI — all STT/LLM/TTS runs via cloud APIs (Deepgram, Groq, Cartesia). Hub runs orchestration, HA bridge, and Supabase sync only.
+
+---
+
+## Apartment Hub
+
+| # | Component | Part | Qty | Est. Unit Cost | Order Link |
+|---|-----------|------|-----|---------------|------------|
+| 1 | Single-board computer | Raspberry Pi Zero 2 W | 1 | $15.00 | [Raspberry Pi](https://www.raspberrypi.com/products/raspberry-pi-zero-2-w/) \| [PiShop](https://www.pishop.us/product/raspberry-pi-zero-2-w/) \| [Adafruit](https://www.adafruit.com/product/5291) |
+| 2 | MEMS microphone | INMP441 I2S breakout | 1 | $1.50 | [AliExpress](https://www.aliexpress.com/wholesale?SearchText=INMP441+I2S) \| [Amazon](https://www.amazon.com/s?k=INMP441+I2S+microphone) |
+| 3 | Audio amplifier | MAX98357A I2S amp module | 1 | $2.00 | [Adafruit](https://www.adafruit.com/product/3006) \| [AliExpress](https://www.aliexpress.com/wholesale?SearchText=MAX98357A+I2S) |
+| 4 | Speaker | 28mm 4-ohm 2W driver | 1 | $0.40 | [AliExpress](https://www.aliexpress.com/wholesale?SearchText=28mm+2W+4ohm+speaker) |
+| 5 | Temp/humidity sensor | Sensirion SHT40 I2C module | 1 | $2.00 | [Adafruit](https://www.adafruit.com/product/4885) \| [DigiKey](https://www.digikey.com/en/products/filter/humidity-moisture-sensors/529?s=sht40) \| [Mouser](https://www.mouser.com/c/?q=sht40) |
+| 6 | Ambient light sensor | BH1750 I2C module | 1 | $0.40 | [AliExpress](https://www.aliexpress.com/wholesale?SearchText=BH1750+light+sensor) \| [Amazon](https://www.amazon.com/s?k=BH1750+light+sensor+module) |
+| 7 | mmWave presence sensor | HLK-LD2410C 24GHz | 1 | $2.75 | [AliExpress](https://www.aliexpress.com/wholesale?SearchText=LD2410C) \| [Amazon](https://www.amazon.com/s?k=HLK-LD2410C) |
+| 8 | Air quality / VOC sensor | ScioSense ENS160 I2C module | 1 | $3.00 | [Adafruit](https://www.adafruit.com/product/5606) \| [SparkFun](https://www.sparkfun.com/products/20844) \| [DigiKey](https://www.digikey.com/en/products/filter/gas-sensors/535?s=ens160) |
+| 9 | NFC reader | PN532 NFC/RFID module (I2C/SPI) | 1 | $4.00 | [Adafruit](https://www.adafruit.com/product/364) \| [AliExpress](https://www.aliexpress.com/wholesale?SearchText=PN532+NFC+module) |
+| 10 | IR blaster + receiver | IR LED + TSOP38238 | 1 | $0.20 | [AliExpress](https://www.aliexpress.com/wholesale?SearchText=IR+LED+TSOP38238) \| [DigiKey](https://www.digikey.com/en/products/detail/vishay/TSOP38238/1768188) |
+| 11 | RGB status LED | WS2812B (NeoPixel) | 1 | $0.08 | [AliExpress](https://www.aliexpress.com/wholesale?SearchText=WS2812B+LED) \| [Adafruit](https://www.adafruit.com/product/1655) |
+| 12 | Power supply | Micro USB 5V/2.5A adapter | 1 | $5.00 | [Amazon](https://www.amazon.com/s?k=micro+usb+5v+2.5a+power+supply) \| [AliExpress](https://www.aliexpress.com/wholesale?SearchText=micro+usb+5v+2.5a) |
+| 13 | Enclosure | Custom injection molded ABS (smaller form factor) | 1 | $4.00* | Custom — see notes below |
+| | | | | | |
+| | **Hub subtotal** | | | **~$40** | |
+
+> \* Enclosure cost amortized over 1,000 units. Separate mold from Standard hub due to smaller Pi Zero form factor. Tooling is $2,000–$3,500 one-time.
+
+> **Note:** No AI HAT or NVMe SSD. The Pi Zero 2 W has no PCIe interface — the Hailo AI HAT+ 2 is incompatible. Local AI inference is not supported by design; all voice processing runs via cloud APIs.
+
+### Apartment Hub Specs Summary
+
+- **Compute:** Raspberry Pi Zero 2 W (quad-core ARM Cortex-A53 @ 1GHz, 512MB RAM)
+- **AI:** None — cloud-only (Deepgram STT, Groq LLM, Cartesia TTS)
+- **Audio:** I2S MEMS mic (INMP441) + I2S amplifier (MAX98357A) + 2W speaker
+- **Sensors:** Temperature/humidity (SHT40), ambient light (BH1750), mmWave presence (LD2410C), air quality/VOC (ENS160)
+- **Connectivity:** WiFi 4 (802.11b/g/n), Bluetooth 4.2/BLE, NFC (PN532), IR blaster
+- **Indicators:** WS2812B addressable RGB LED
+- **Power:** Micro USB 5V/2.5A
+
+---
+
+## Apartment Satellite Node (x1)
+
+Identical to the Standard satellite node. See satellite BOM below.
+
+| Component Group | Cost |
+|----------------|------|
+| Apartment Hub | ~$40 |
+| 1x Satellite Node | ~$25 |
+| **Total BOM** | **~$65** |
+| **Retail Price** | **$1,899.00** |
+| **Gross Margin** | **~97%** |
+
+---
+
+---
+
+# CleverHub Standard — $2,500.00 (one-time) + $100/mo cloud AI features
+
+Full local + cloud hybrid voice processing. Tier 3 local fallback runs on-device when internet is unavailable.
+
+---
+
+## Standard Hub
 
 | # | Component | Part | Qty | Est. Unit Cost | Order Link |
 |---|-----------|------|-----|---------------|------------|
@@ -39,7 +103,7 @@
 
 ---
 
-## Satellite Node (x4 per standard system)
+## Satellite Node (x1 Apartment / x4 Standard)
 
 | # | Component | Part | Qty/Node | Est. Unit Cost | Order Link |
 |---|-----------|------|----------|---------------|------------|
@@ -74,11 +138,11 @@
 
 ---
 
-## Full System BOM Summary
+## Standard Full System BOM Summary
 
 | Component Group | Cost |
 |----------------|------|
-| Hub (all components) | ~$245 |
+| Standard Hub | ~$245 |
 | 4x Satellite Nodes | ~$100 |
 | **Total BOM** | **~$345** |
 | **Retail Price** | **$2,500.00** |
